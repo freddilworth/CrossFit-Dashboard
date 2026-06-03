@@ -317,6 +317,7 @@ function App(){
   const[inText,setInText]=useState('');
   const[inHappy,setInHappy]=useState('');
   const[inFun,setInFun]=useState('');
+  const[editMood,setEditMood]=useState(null); // date string of session being mood-edited
   const[parsing,setParsing]=useState(false);
   const[pErr,setPErr]=useState('');
   const[pOk,setPOk]=useState('');
@@ -481,14 +482,14 @@ function App(){
           <div>
             <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">How do you feel about your performance today?</div>
             <div style="display:flex;gap:4px">
-              ${[['happy','😊 Happy'],['neutral','😐 Neutral'],['unhappy','😞 Not Happy']].map(([v,l])=>
+              ${[['happy','Happy'],['neutral','Neutral'],['unhappy','Not Happy']].map(([v,l])=>
                 html`<button class="rn ${inHappy===v?'act':''}" onClick=${()=>setInHappy(inHappy===v?'':v)}>${l}</button>`)}
             </div>
           </div>
           <div>
             <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">Did you have fun at the gym today?</div>
             <div style="display:flex;gap:4px">
-              ${[['fun','😄 Had Fun'],['neutral','😐 Neutral'],['notfun','😕 Not Fun']].map(([v,l])=>
+              ${[['fun','Had Fun'],['neutral','Neutral'],['notfun','Not Fun']].map(([v,l])=>
                 html`<button class="rn ${inFun===v?'act':''}" onClick=${()=>setInFun(inFun===v?'':v)}>${l}</button>`)}
             </div>
           </div>
@@ -502,10 +503,17 @@ function App(){
       </div>
       <div class="card"><div class="ct">Session History</div>
         ${sess.length===0?html`<div class="mut" style="padding:12px 0">No sessions yet.</div>`:
-        sess.map(s=>{const o=exp===s.date;return html`<div>
-          <div class="sr ${o?'open':''}" onClick=${()=>setExp(o?null:s.date)}>
+        sess.map(s=>{const o=exp===s.date;const em=editMood===s.date;
+          const hLabel={happy:'Happy',neutral:'Neutral',unhappy:'Not Happy'};
+          const fLabel={fun:'Had Fun',neutral:'Neutral',notfun:'Not Fun'};
+          return html`<div>
+          <div class="sr ${o?'open':''}" onClick=${()=>{setExp(o?null:s.date);if(o)setEditMood(null);}}>
             <div style="display:flex;justify-content:space-between;align-items:center">
-              <div><span style="font-weight:700;font-size:12px;color:#2E3F5C">${fd(s.date)}</span></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-weight:700;font-size:12px;color:#2E3F5C">${fd(s.date)}</span>
+                ${s.happiness&&html`<span class="mut" style="font-size:10px">${hLabel[s.happiness]||''}</span>`}
+                ${s.fun&&html`<span class="mut" style="font-size:10px">· ${fLabel[s.fun]||''}</span>`}
+              </div>
               <div style="display:flex;gap:3px;align-items:center">
                 ${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k==='strength'?'str':b.k==='metcon'?'met':'acc'}">${{strength:'STR',metcon:'MET',accessory:'ACC'}[b.k]||b.k}</span>`)}
                 <span style="margin-left:6px;color:#7A7168;font-size:12px">${o?'▲':'▼'}</span>
@@ -515,12 +523,41 @@ function App(){
           ${o&&html`<div class="sd">
             ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
             ${s.raw_text&&html`<div class="note-block">${s.raw_text}</div>`}
-            <div style="display:flex;justify-content:flex-end;padding:8px 0 4px">
+            ${em?html`<div style="padding:10px 0 6px;border-top:1px solid #DDD7CE;margin-top:8px">
+              <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:10px">
+                <div>
+                  <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">Performance Satisfaction</div>
+                  <div style="display:flex;gap:4px">
+                    ${[['happy','Happy'],['neutral','Neutral'],['unhappy','Not Happy']].map(([v,l])=>{
+                      const cur=sess.find(x=>x.date===s.date)?.happiness||'';
+                      return html`<button class="rn ${cur===v?'act':''}" onClick=${async()=>{
+                        await fetch(SB_URL+'/rest/v1/sessions?id=eq.'+s.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({happiness:cur===v?'':v})});
+                        const updated=await sbGet('sessions','order=date.desc');setSess(updated);
+                      }}>${l}</button>`;
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">Enjoyment</div>
+                  <div style="display:flex;gap:4px">
+                    ${[['fun','Had Fun'],['neutral','Neutral'],['notfun','Not Fun']].map(([v,l])=>{
+                      const cur=sess.find(x=>x.date===s.date)?.fun||'';
+                      return html`<button class="rn ${cur===v?'act':''}" onClick=${async()=>{
+                        await fetch(SB_URL+'/rest/v1/sessions?id=eq.'+s.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({fun:cur===v?'':v})});
+                        const updated=await sbGet('sessions','order=date.desc');setSess(updated);
+                      }}>${l}</button>`;
+                    })}
+                  </div>
+                </div>
+              </div>
+              <button class="rn act" style="font-size:10px" onClick=${()=>setEditMood(null)}>Done</button>
+            </div>`:''}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 4px">
+              <button style="background:transparent;color:#2E3F5C;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setEditMood(em?null:s.date)}>${em?'Cancel':'Edit Ratings'}</button>
               <button style="background:transparent;color:#B03A2E;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{if(confirm('Delete?')){sbDel('sessions','date=eq.'+s.date);setSess(p=>p.filter(x=>x.date!==s.date));}}}>Delete</button>
             </div>
           </div>`}
         </div>`;})}
-      </div>
     </div>`;
   }
 
