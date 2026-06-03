@@ -156,13 +156,15 @@ function fd(d){if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString(
 function fds(d){if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 
 function calPeriod(type,offset=0){
-  const now=new Date();let s,e;
-  if(type==='week'){const d=new Date(now);d.setDate(d.getDate()-offset*7);const dy=d.getDay();d.setDate(d.getDate()-(dy===0?6:dy-1));s=new Date(d);e=new Date(d);e.setDate(e.getDate()+6);}
-  else if(type==='month'){s=new Date(now.getFullYear(),now.getMonth()-offset,1);e=new Date(now.getFullYear(),now.getMonth()-offset+1,0);}
-  else if(type==='quarter'){const q=Math.floor(now.getMonth()/3)-offset;const yr=now.getFullYear()+Math.floor(q/4);const qm=((q%4)+4)%4;s=new Date(yr,qm*3,1);e=new Date(yr,qm*3+3,0);}
-  else if(type==='year'){s=new Date(now.getFullYear()-offset,0,1);e=new Date(now.getFullYear()-offset,11,31);}
-  else{s=new Date(2000,0,1);e=new Date(2099,11,31);}
-  return{start:s.toISOString().slice(0,10),end:e.toISOString().slice(0,10)};
+  const now=new Date();const today=now.toISOString().slice(0,10);let s;
+  const days={week:7,month:30,quarter:90,year:365};
+  if(type==='all')return{start:'2000-01-01',end:today};
+  const d=days[type]||30;
+  const totalDays=d*(offset+1);
+  const prevDays=d*offset;
+  const sDate=new Date(now);sDate.setDate(sDate.getDate()-totalDays+1);
+  const eDate=new Date(now);eDate.setDate(eDate.getDate()-prevDays);
+  return{start:sDate.toISOString().slice(0,10),end:eDate.toISOString().slice(0,10)};
 }
 
 // ══════ SVG CHARTS ══════
