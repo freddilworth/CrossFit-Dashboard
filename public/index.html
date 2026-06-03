@@ -309,6 +309,10 @@ function App(){
   const[parsing,setParsing]=useState(false);
   const[pErr,setPErr]=useState('');
   const[pOk,setPOk]=useState('');
+  const[tdRng,setTdRng]=useState('month');
+  const[modRng,setModRng]=useState('month');
+  const[patRng,setPatRng]=useState('month');
+  const[subRng,setSubRng]=useState('month');
 
   useEffect(()=>{let c=false;(async()=>{
     await sbInit();
@@ -362,6 +366,22 @@ function App(){
 
   const tabs=['Dashboard','Workout Log','Volume','PRs'];
 
+  // ══════ DASHBOARD CARD HELPERS (defined at App level — stable references) ══════
+  const RNGS=[['week','W'],['month','M'],['quarter','Q'],['year','Y'],['all','All']];
+  function CardHead({title,rng,setRng}){
+    return html`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px">
+      <span style="font-size:10px;font-weight:700;color:#2E3F5C;letter-spacing:2px;text-transform:uppercase">${title}</span>
+      <div style="display:flex;gap:3px">${RNGS.map(([k,l])=>
+        html`<button class="rn ${rng===k?'act':''}" style="padding:2px 7px;font-size:10px" onClick=${()=>setRng(k)}>${l}</button>`)}</div>
+    </div>`;
+  }
+
+  // Dashboard aggregations driven by App-level toggle state
+  const tdAgg=useMemo(()=>agg(sess,calPeriod(tdRng,0).start,calPeriod(tdRng,0).end),[sess,tdRng]);
+  const modAgg=useMemo(()=>agg(sess,calPeriod(modRng,0).start,calPeriod(modRng,0).end),[sess,modRng]);
+  const patAgg=useMemo(()=>agg(sess,calPeriod(patRng,0).start,calPeriod(patRng,0).end),[sess,patRng]);
+  const subAgg=useMemo(()=>agg(sess,calPeriod(subRng,0).start,calPeriod(subRng,0).end),[sess,subRng]);
+
   // ══════ DASHBOARD TAB ══════
   function DashTab(){
     const sc=streak<5?'streak-g':streak<7?'streak-y':'streak-r';
@@ -370,34 +390,12 @@ function App(){
     const pushPull=pullF?((pushF/pullF).toFixed(1)+':1'):(pushF?pushF+':0':'0:0');
     const sqHi=hiF?((sqF/hiF).toFixed(1)+':1'):(sqF?sqF+':0':'0:0');
 
-    const[tdRng,setTdRng]=useState('month');
-    const[modRng,setModRng]=useState('month');
-    const[patRng,setPatRng]=useState('month');
-    const[subRng,setSubRng]=useState('month');
-
-    const tdAgg=useMemo(()=>agg(sess,calPeriod(tdRng,0).start,calPeriod(tdRng,0).end),[sess,tdRng]);
-    const modAgg=useMemo(()=>agg(sess,calPeriod(modRng,0).start,calPeriod(modRng,0).end),[sess,modRng]);
-    const patAgg=useMemo(()=>agg(sess,calPeriod(patRng,0).start,calPeriod(patRng,0).end),[sess,patRng]);
-    const subAgg=useMemo(()=>agg(sess,calPeriod(subRng,0).start,calPeriod(subRng,0).end),[sess,subRng]);
-
     const tdD=[{label:'Short (<7m)',val:tdAgg.td.short,color:'#C0392B'},{label:'Medium (7-15m)',val:tdAgg.td.med,color:'#2E86C1'},{label:'Long (15m+)',val:tdAgg.td.long,color:'#2E3F5C'}];
     const modD=MK.map(k=>({label:MODS[k].l,val:modAgg.mF[k]||0,color:MODS[k].c}));
     const patD=PK.map(k=>({label:PATS[k].l,val:patAgg.pF[k]||0,color:PATS[k].c}));
     const vpush=(subAgg.sF.push_vertical||0);const hpush=(subAgg.sF.push_horizontal||0);
     const vpull=(subAgg.sF.pull_vertical||0);const hpull=(subAgg.sF.pull_horizontal||0);
     const trad=(subAgg.sF.squat_traditional||0);const sleg=(subAgg.sF.squat_single_leg||0);
-
-    const RNGS=[['week','W'],['month','M'],['quarter','Q'],['year','Y'],['all','All']];
-    function CardToggle({rng,setRng}){
-      return html`<div style="display:flex;gap:3px">${RNGS.map(([k,l])=>
-        html`<button class="rn ${rng===k?'act':''}" style="padding:2px 7px;font-size:10px" onClick=${()=>setRng(k)}>${l}</button>`)}</div>`;
-    }
-    function CardHead({title,rng,setRng}){
-      return html`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px">
-        <span style="font-size:10px;font-weight:700;color:#2E3F5C;letter-spacing:2px;text-transform:uppercase">${title}</span>
-        <${CardToggle} rng=${rng} setRng=${setRng}/>
-      </div>`;
-    }
 
     return html`<div>
       <div class="g4" style="margin-bottom:14px">
@@ -421,21 +419,21 @@ function App(){
       </div>
       <div class="g2">
         <div class="card">
-          <${CardHead} title="Time Domain Balance" rng=${tdRng} setRng=${setTdRng}/>
+          ${CardHead({title:'Time Domain Balance',rng:tdRng,setRng:setTdRng})}
           <${Donut} data=${tdD}/>
         </div>
         <div class="card">
-          <${CardHead} title="Modality Balance" rng=${modRng} setRng=${setModRng}/>
+          ${CardHead({title:'Modality Balance',rng:modRng,setRng:setModRng})}
           <${Donut} data=${modD}/>
         </div>
       </div>
       <div class="g2">
         <div class="card">
-          <${CardHead} title="Pattern Balance" rng=${patRng} setRng=${setPatRng}/>
+          ${CardHead({title:'Pattern Balance',rng:patRng,setRng:setPatRng})}
           <${Donut} data=${patD}/>
         </div>
         <div class="card">
-          <${CardHead} title="Sub-Category Balance" rng=${subRng} setRng=${setSubRng}/>
+          ${CardHead({title:'Sub-Category Balance',rng:subRng,setRng:setSubRng})}
           <div style="font-size:12px;line-height:2">
             <div><b>Push:</b> Vertical ${vpush} / Horizontal ${hpush}</div>
             <div><b>Pull:</b> Vertical ${vpull} / Horizontal ${hpull}</div>
@@ -578,10 +576,10 @@ function App(){
     <div class="hdr"><div class="logo">⚡</div><div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
     <div class="bod">
-      ${tab==='Dashboard'&&html`<${DashTab}/>`}
-      ${tab==='Workout Log'&&html`<${LogTab}/>`}
-      ${tab==='Volume'&&html`<${VolTab}/>`}
-      ${tab==='PRs'&&html`<${PrTab}/>`}
+      ${tab==='Dashboard'&&DashTab()}
+      ${tab==='Workout Log'&&LogTab()}
+      ${tab==='Volume'&&VolTab()}
+      ${tab==='PRs'&&PrTab()}
     </div>
   </div>`;
 }
