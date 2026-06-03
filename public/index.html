@@ -82,7 +82,7 @@ async function sbDelete(t,m){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+m,{met
 /* ── Two-axis constants ─────────────────────── */
 const PAT={push:{l:"Push",c:"#C0392B"},pull:{l:"Pull",c:"#2E86C1"},squat:{l:"Squat",c:"#E67E22"},hinge:{l:"Hinge",c:"#27AE60"},core:{l:"Core",c:"#8E44AD"},mono:{l:"Mono",c:"#5D6D7E"},other:{l:"Other",c:"#AAA"}};
 const MOD={weightlifting:{l:"Weightlifting",c:"#C07D3A"},gymnastics:{l:"Gymnastics",c:"#2E86C1"},monostructural:{l:"Monostructural",c:"#27AE60"},other:{l:"Other",c:"#AAA"}};
-const PKEYS=["push","pull","squat","hinge","core","mono"];
+const PKEYS=["push","pull","squat","hinge","core"];
 const MKEYS=["weightlifting","gymnastics","monostructural"];
 
 /* ── Date helpers ──────────────────────────── */
@@ -125,17 +125,74 @@ function lastRestDay(sessions){
   return null;
 }
 
+/* ── Movement classifier ────────────────────── */
+function classifyMovement(name){
+  if(!name)return null;
+  // Monostructural — pat is null
+  if(/cal\s+row|cal\s+ski|cal\s+bike/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\b(assault\s+bike|echo\s+bike|air\s+bike)\b/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\b(rower|ski\s+erg)\b/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\b(row|ski|bike)\b/i.test(name)&&!/barbell|db\s|dumbbell|bent|ring/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\b(run|sprint|double\s+under|double-under|\bdu\b|\bdus\b|single\s+under|jump\s+rope)\b/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\b(box\s+jump|burpee|burpees)/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  // Core gymnastics
+  if(/\bttb\b|toes.to.bar|ghd\s+sit.?up|\bsit.?up\b|ab\s+mat|\bl.sit\b|plank|\bv.up\b|\bk2e\b|knees.to.elbow|hollow/i.test(name))return{pat:"core",sub:null,mod:"gymnastics"};
+  // Pull vertical gymnastics
+  if(/pull.?up|c2b|chest.to.bar|bar\s+muscle.?up|ring\s+muscle.?up|\bmuscle.?up\b|rope\s+climb|butterfly\s+pull|kipping/i.test(name))return{pat:"pull",sub:"vertical",mod:"gymnastics"};
+  // Pull horizontal gymnastics
+  if(/ring\s+row/i.test(name))return{pat:"pull",sub:"horizontal",mod:"gymnastics"};
+  // Pull horizontal weightlifting
+  if(/barbell\s+row|db\s+row|dumbbell\s+row|pendlay\s+row|bent\s+over\s+row/i.test(name))return{pat:"pull",sub:"horizontal",mod:"weightlifting"};
+  // Push vertical gymnastics
+  if(/\bhspu\b|handstand\s+push.?up/i.test(name))return{pat:"push",sub:"vertical",mod:"gymnastics"};
+  // Push horizontal gymnastics
+  if(/\bpush.?up\b|ring\s+push.?up|\bdip\b/i.test(name))return{pat:"push",sub:"horizontal",mod:"gymnastics"};
+  // Push vertical weightlifting
+  if(/strict\s+press|push\s+press|push\s+jerk|split\s+jerk|overhead\s+press|shoulder\s+press/i.test(name))return{pat:"push",sub:"vertical",mod:"weightlifting"};
+  // Push horizontal weightlifting
+  if(/bench\s+press|db\s+bench|floor\s+press/i.test(name))return{pat:"push",sub:"horizontal",mod:"weightlifting"};
+  // Hinge weightlifting — check before generic squat patterns
+  if(/c&j|\bclean\s*&\s*jerk\b|clean\s+and\s+jerk/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/power\s+clean|power\s+snatch/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/\bdeadlift\b|\brdl\b|romanian/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/kb\s+swing|kettlebell\s+swing|good\s+morning/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/db\s+hang\s+snatch|sa\s+db.*snatch|db\s+snatch|db\s+clean|dumbbell\s+snatch|dumbbell\s+clean/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/hang\s+snatch|hang\s+clean/i.test(name)&&!/squat/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  // Squat olympic variants
+  if(/squat\s+clean|squat\s+snatch|hang\s+squat/i.test(name))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
+  // Squat single-leg
+  if(/\blunge\b|pistol|step.?up|bulgarian|single.?leg/i.test(name))return{pat:"squat",sub:"single-leg",mod:"weightlifting"};
+  // Squat weightlifting
+  if(/back\s+squat|front\s+squat|overhead\s+squat|\bohs\b|thruster|wall\s+ball|air\s+squat|goblet\s+squat|sa\s+db\s+thruster|db\s+thruster|\bsquat\b/i.test(name))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
+  return null;
+}
+
 /* ── Aggregation ───────────────────────────── */
 function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
   const patFreq={},patTon={},patReps={},modFreq={},modTon={},patSub={},td={short:0,med:0,long:0},mvTmp={};
 
+  // Resolve pat/mod/sub for a movement, using classifier as primary source
+  const VALID_PATS=new Set(["push","pull","squat","hinge","core"]);
+  const VALID_MODS=new Set(["weightlifting","gymnastics","monostructural"]);
+  const resolve=(nm,storedPat,storedMod,storedSub)=>{
+    const cls=classifyMovement(nm);
+    if(cls)return cls;
+    // Fall back to stored values, mapping old-format keys
+    const pat=(storedPat&&VALID_PATS.has(storedPat))?storedPat:null;
+    const mod=(storedMod&&VALID_MODS.has(storedMod))?storedMod:(pat?"weightlifting":"monostructural");
+    return{pat,sub:storedSub||null,mod};
+  };
+
   const addMov=(nm,pat,mod,sub,reps,ton,date)=>{
-    const p=pat||"other",m=mod||"other";
-    patFreq[p]=(patFreq[p]||0)+1;patTon[p]=(patTon[p]||0)+ton;patReps[p]=(patReps[p]||0)+reps;
+    const m=mod||"other";
+    // Only track pattern freq/ton for real patterns (not null/mono)
+    if(pat&&VALID_PATS.has(pat)){
+      patFreq[pat]=(patFreq[pat]||0)+1;patTon[pat]=(patTon[pat]||0)+ton;patReps[pat]=(patReps[pat]||0)+reps;
+      if(sub){if(!patSub[pat])patSub[pat]={};if(!patSub[pat][sub])patSub[pat][sub]={freq:0,ton:0};patSub[pat][sub].freq++;patSub[pat][sub].ton+=ton;}
+    }
     modFreq[m]=(modFreq[m]||0)+1;modTon[m]=(modTon[m]||0)+ton;
-    if(sub){if(!patSub[p])patSub[p]={};if(!patSub[p][sub])patSub[p][sub]={freq:0,ton:0};patSub[p][sub].freq++;patSub[p][sub].ton+=ton;}
-    if(!mvTmp[nm])mvTmp[nm]={sd:new Set(),reps:0,ton:0,pat:p,mod:m,sub:sub||null,last:""};
+    if(!mvTmp[nm])mvTmp[nm]={sd:new Set(),reps:0,ton:0,pat:pat,mod:m,sub:sub||null,last:""};
     mvTmp[nm].sd.add(date);mvTmp[nm].reps+=reps;mvTmp[nm].ton+=ton;
     if(date>mvTmp[nm].last)mvTmp[nm].last=date;
   };
@@ -143,16 +200,15 @@ function agg(sessions,start,end){
   for(const sess of filt){
     for(const b of(sess.blocks||[])){
       if(b.k==="strength"||b.k==="accessory"){
-        const pat=b.pat||b.p||"other",mod=b.mod||(b.pat==="mono"?"monostructural":"weightlifting"),sub=b.sub||null;
+        const{pat,mod,sub}=resolve(b.mov||"",b.pat||b.p,b.mod,b.sub);
         const reps=(b.sets||[]).reduce((s,x)=>s+(x.r||0),0),ton=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);
         addMov(b.mov||"?",pat,mod,sub,reps,ton,sess.date);
       }
       if(b.k==="metcon"){
         const tdv=b.td||"unk";if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
-          const pat=pm.pat||pm.p||"other";
-          const mod=pm.mod||(pat==="mono"?"monostructural":pat==="core"||pat==="push"||pat==="pull"?"gymnastics":"other");
-          addMov(pm.n||"?",pat,mod,pm.sub||null,pm.r||0,(pm.r||0)*(pm.w||0),sess.date);
+          const{pat,mod,sub}=resolve(pm.n||"",pm.pat||pm.p,pm.mod,pm.sub);
+          addMov(pm.n||"?",pat,mod,sub,pm.r||0,(pm.r||0)*(pm.w||0),sess.date);
         }
       }
     }
