@@ -20,6 +20,7 @@ body{font-family:'Inter',sans-serif;background:#F5F2EE;color:#2C2A27;min-height:
 .body{padding:20px 24px;max-width:1100px;margin:0 auto}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
 .card{background:#FDFBF8;border:1px solid #DDD7CE;border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .ct{font-size:10px;font-weight:700;color:#2E3F5C;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px}
 .sc{background:#E8EDF5;border:1px solid #C9C0B4;border-radius:10px;padding:16px;text-align:center}
@@ -35,7 +36,6 @@ tr:nth-child(even) td{background:#F0EDE8}
 textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 .btn{background:#2E3F5C;color:#fff;border:none;border-radius:6px;padding:9px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-s{background:#F0EDE8;color:#2E3F5C;border:1px solid #DDD7CE;border-radius:5px;padding:4px 10px;font-weight:600;font-size:11px;cursor:pointer;font-family:inherit}
 .rn{padding:4px 10px;border-radius:4px;border:1px solid #DDD7CE;background:transparent;color:#7A7168;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 .rn.active{border-color:#2E3F5C;background:#2E3F5C;color:#fff}
 .badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px}
@@ -54,122 +54,174 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 .ok{color:#2D6A4F;font-size:12px;font-weight:600;margin-top:8px}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid #DDD7CE;border-top-color:#2E3F5C;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.sec-title{font-size:13px;font-weight:700;color:#2E3F5C;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #DDD7CE}
-@media(max-width:700px){.g2,.g3{grid-template-columns:1fr}}
+.delta-up{color:#2D6A4F;font-size:10px;font-weight:700}
+.delta-dn{color:#B03A2E;font-size:10px;font-weight:700}
+.delta-eq{color:#B0A89E;font-size:10px}
+.streak-green{color:#2D6A4F}
+.streak-yellow{color:#B5651D}
+.streak-red{color:#B03A2E}
+@media(max-width:700px){.g2,.g3,.g4{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div id="app"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#7A7168">Loading...</div></div>
 <script type="module">
 import{h,render}from'https://esm.sh/preact@10.19.3';
-import{useState,useEffect,useMemo,useCallback}from'https://esm.sh/preact@10.19.3/hooks';
+import{useState,useEffect,useMemo}from'https://esm.sh/preact@10.19.3/hooks';
 import htm from'https://esm.sh/htm@3.1.1';
 const html=htm.bind(h);
 
-/* ── Supabase REST helpers ─────────────────── */
+/* ── Supabase helpers ──────────────────────── */
 let SB_URL='',SB_KEY='';
-
-async function sbInit(){
-  try{const r=await fetch('/api/config');const d=await r.json();SB_URL=d.supabaseUrl;SB_KEY=d.supabaseKey;}
-  catch(e){console.error('Config load failed',e);}
-}
-
+async function sbInit(){try{const r=await fetch('/api/config');const d=await r.json();SB_URL=d.supabaseUrl;SB_KEY=d.supabaseKey;}catch(e){console.error('Config load failed',e);}}
 function sbHeaders(){return{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};}
+async function sbGet(t,p=''){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+p,{headers:sbHeaders()});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPost(t,d){const r=await fetch(SB_URL+'/rest/v1/'+t,{method:'POST',headers:{...sbHeaders(),'Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbDelete(t,m){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+m,{method:'DELETE',headers:sbHeaders()});if(!r.ok)throw new Error(await r.text());}
 
-async function sbGet(table,params=''){
-  const r=await fetch(SB_URL+'/rest/v1/'+table+'?'+params,{headers:sbHeaders()});
-  if(!r.ok)throw new Error(await r.text());return r.json();
-}
-async function sbPost(table,data){
-  const r=await fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{...sbHeaders(),'Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(data)});
-  if(!r.ok)throw new Error(await r.text());return r.json();
-}
-async function sbPatch(table,match,data){
-  const r=await fetch(SB_URL+'/rest/v1/'+table+'?'+match,{method:'PATCH',headers:sbHeaders(),body:JSON.stringify(data)});
-  if(!r.ok)throw new Error(await r.text());return r.json();
-}
-async function sbDelete(table,match){
-  const r=await fetch(SB_URL+'/rest/v1/'+table+'?'+match,{method:'DELETE',headers:sbHeaders()});
-  if(!r.ok)throw new Error(await r.text());
-}
+/* ── Two-axis constants ─────────────────────── */
+const PAT={push:{l:"Push",c:"#C0392B"},pull:{l:"Pull",c:"#2E86C1"},squat:{l:"Squat",c:"#E67E22"},hinge:{l:"Hinge",c:"#27AE60"},core:{l:"Core",c:"#8E44AD"},mono:{l:"Mono",c:"#5D6D7E"},other:{l:"Other",c:"#AAA"}};
+const MOD={weightlifting:{l:"Weightlifting",c:"#C07D3A"},gymnastics:{l:"Gymnastics",c:"#2E86C1"},monostructural:{l:"Monostructural",c:"#27AE60"},other:{l:"Other",c:"#AAA"}};
+const PKEYS=["push","pull","squat","hinge","core","mono"];
+const MKEYS=["weightlifting","gymnastics","monostructural"];
 
-/* ── Pattern meta ──────────────────────────── */
-const PAT={push:{l:"Push",c:"#C0392B"},pull:{l:"Pull",c:"#2E86C1"},squat:{l:"Squat",c:"#E67E22"},hinge:{l:"Hinge",c:"#27AE60"},core:{l:"Core",c:"#8E44AD"},mono:{l:"Mono",c:"#5D6D7E"},olympic:{l:"Olympic",c:"#C07D3A"},other:{l:"Other",c:"#AAA"}};
-const PKEYS=["push","pull","squat","hinge","core","mono","olympic"];
-
+/* ── Date helpers ──────────────────────────── */
 function fd(d){if(!d)return"";return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
-function weekStart(ds){const d=new Date(ds+"T12:00:00");const dy=d.getDay();d.setDate(d.getDate()-(dy===0?6:dy-1));return d.toISOString().slice(0,10);}
 
-/* ── SVG Charts ────────────────────────────── */
-function HBar({data,w=380,ht=180}){
-  if(!data.length)return html`<div style="color:#B0A89E;font-size:12px;padding:16px;text-align:center">No data yet</div>`;
-  const mx=Math.max(...data.map(d=>d.val),1);
-  const bh=Math.min(22,ht/data.length-4);
-  const lw=70;
-  return html`<svg width=${w} height=${Math.max(ht,data.length*(bh+4)+8)} style="display:block;max-width:100%">
-    ${data.map((d,i)=>{const y=i*(bh+4)+4;const bw=Math.max(2,(d.val/mx)*(w-lw-60));
-      return html`<g key=${i}>
-        <text x=${lw-6} y=${y+bh/2+4} text-anchor="end" font-size="11" fill="#2C2A27">${d.label}</text>
-        <rect x=${lw} y=${y} width=${bw} height=${bh} rx="3" fill=${d.color||"#4A6FA5"}/>
-        <text x=${lw+bw+6} y=${y+bh/2+4} font-size="11" fill="#7A7168">${d.val>=1000?(d.val/1000).toFixed(1)+"k":d.val}</text>
-      </g>`;
-    })}
-  </svg>`;
+function calRange(rng){
+  const today=new Date();const ts=today.toISOString().slice(0,10);
+  if(rng==="week"){const d=new Date(today);const dy=d.getDay();d.setDate(d.getDate()-(dy===0?6:dy-1));const e=new Date(d);e.setDate(e.getDate()+6);return{start:d.toISOString().slice(0,10),end:e.toISOString().slice(0,10)};}
+  if(rng==="month")return{start:ts.slice(0,7)+"-01",end:ts};
+  if(rng==="quarter"){const m=today.getMonth();const qs=new Date(today.getFullYear(),Math.floor(m/3)*3,1);return{start:qs.toISOString().slice(0,10),end:ts};}
+  if(rng==="year")return{start:today.getFullYear()+"-01-01",end:ts};
+  return{start:"2000-01-01",end:ts};
 }
 
-function Donut({data,size=150}){
-  if(!data.length)return html`<div style="color:#B0A89E;font-size:12px;padding:16px;text-align:center">No data</div>`;
-  const total=data.reduce((a,d)=>a+d.val,0);const cx=size/2,cy=size/2,r=size*.35,ir=size*.2;
-  let cum=-Math.PI/2;const colors=["#C0392B","#2E86C1","#2E3F5C","#7A7168"];
-  return html`<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <svg width=${size} height=${size}>${data.map((d,i)=>{
-      const ang=(d.val/total)*Math.PI*2;const sa=cum;cum+=ang;const ea=cum;
-      const x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(ea),y2=cy+r*Math.sin(ea);
-      const ix1=cx+ir*Math.cos(ea),iy1=cy+ir*Math.sin(ea),ix2=cx+ir*Math.cos(sa),iy2=cy+ir*Math.sin(sa);
-      const lg=ang>Math.PI?1:0;
-      return html`<path d="M${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${lg} 0 ${ix2},${iy2} Z" fill=${colors[i%4]}/>`;
-    })}</svg>
-    <div style="font-size:11px">${data.map((d,i)=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-      <div style="width:10px;height:10px;border-radius:2px;background:${colors[i%4]}"></div>
-      <span>${d.label}: ${d.val}</span>
-    </div>`)}</div>
-  </div>`;
+function periodBuckets(rng,n){
+  const today=new Date();today.setHours(12,0,0,0);const buckets=[];
+  for(let i=n-1;i>=0;i--){
+    if(rng==="month"){const d=new Date(today.getFullYear(),today.getMonth()-i,1);const e=new Date(d.getFullYear(),d.getMonth()+1,0);buckets.push({start:d.toISOString().slice(0,10),end:e.toISOString().slice(0,10),label:d.toLocaleString('default',{month:'short'})});}
+    else if(rng==="quarter"){const qm=Math.floor(today.getMonth()/3)*3;const qd=new Date(today.getFullYear(),qm-i*3,1);const qe=new Date(qd.getFullYear(),qd.getMonth()+3,0);buckets.push({start:qd.toISOString().slice(0,10),end:qe.toISOString().slice(0,10),label:'Q'+(Math.floor(qd.getMonth()/3)+1)+" '"+(qd.getFullYear()%100)});}
+    else if(rng==="week"){const d=new Date(today);const dy=d.getDay();d.setDate(d.getDate()-(dy===0?6:dy-1)-i*7);const e=new Date(d);e.setDate(e.getDate()+6);buckets.push({start:d.toISOString().slice(0,10),end:e.toISOString().slice(0,10),label:i===0?'This Wk':'Wk-'+i});}
+    else if(rng==="year"){const yr=today.getFullYear()-i;buckets.push({start:yr+'-01-01',end:yr+'-12-31',label:String(yr)});}
+  }
+  return buckets;
 }
 
-function Spark({hist,isTime}){
-  if(!hist||hist.length<2)return html`<span style="color:#B0A89E;font-size:10px">—</span>`;
-  const vals=hist.map(h=>h.v??h.s);const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
-  const W=100,H=28,p=3,step=(W-p*2)/(hist.length-1);
-  const pts=vals.map((v,i)=>{const x=p+i*step;const y=isTime?p+((v-mn)/rng)*(H-p*2):(H-p)-((v-mn)/rng)*(H-p*2);return x+","+y;}).join(" ");
-  return html`<svg width=${W} height=${H} style="display:block">
-    <polyline points=${pts} fill="none" stroke="#4A6FA5" stroke-width="1.5" stroke-linejoin="round"/>
-    ${vals.map((v,i)=>{const x=p+i*step;const y=isTime?p+((v-mn)/rng)*(H-p*2):(H-p)-((v-mn)/rng)*(H-p*2);
-      return html`<circle cx=${x} cy=${y} r=${i===vals.length-1?3:1.5} fill=${i===vals.length-1?"#C07D3A":"#4A6FA5"}/>`;
-    })}
-  </svg>`;
+function consecutiveDays(sessions){
+  const dates=new Set(sessions.map(s=>s.date));let count=0;const d=new Date();d.setHours(12,0,0,0);
+  while(dates.has(d.toISOString().slice(0,10))){count++;d.setDate(d.getDate()-1);}
+  return count;
+}
+
+function lastRestDay(sessions){
+  const dates=new Set(sessions.map(s=>s.date));const today=new Date();today.setHours(12,0,0,0);
+  const todayStr=today.toISOString().slice(0,10);const d=new Date(today);
+  for(let i=0;i<730;i++){
+    const ds=d.toISOString().slice(0,10);
+    if(!dates.has(ds)){const diff=Math.round((new Date(todayStr+"T12:00:00")-new Date(ds+"T12:00:00"))/(864e5));return{date:ds,daysAgo:diff};}
+    d.setDate(d.getDate()-1);
+  }
+  return null;
 }
 
 /* ── Aggregation ───────────────────────────── */
 function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
-  const freq={},ton={},td={short:0,med:0,long:0},mvs={};
-  for(const sess of filt){for(const b of(sess.blocks||[])){
-    if(b.k==="strength"||b.k==="accessory"){
-      const p=b.pat||"other";freq[p]=(freq[p]||0)+1;
-      const t=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);ton[p]=(ton[p]||0)+t;
-      const nm=b.mov||"?";if(!mvs[nm])mvs[nm]={cnt:0,ton:0,pat:p,last:""};
-      mvs[nm].cnt++;mvs[nm].ton+=t;if(sess.date>mvs[nm].last)mvs[nm].last=sess.date;
-    }
-    if(b.k==="metcon"){
-      const tdv=b.td||"unk";if(td[tdv]!==undefined)td[tdv]++;
-      for(const pm of(b.pm||[])){
-        const p=pm.p||"other";freq[p]=(freq[p]||0)+1;const t=(pm.r||0)*(pm.w||0);ton[p]=(ton[p]||0)+t;
-        if(!mvs[pm.n])mvs[pm.n]={cnt:0,ton:0,pat:p,last:""};mvs[pm.n].cnt++;mvs[pm.n].ton+=t;
-        if(sess.date>mvs[pm.n].last)mvs[pm.n].last=sess.date;
+  const patFreq={},patTon={},patReps={},modFreq={},modTon={},patSub={},td={short:0,med:0,long:0},mvTmp={};
+
+  const addMov=(nm,pat,mod,sub,reps,ton,date)=>{
+    const p=pat||"other",m=mod||"other";
+    patFreq[p]=(patFreq[p]||0)+1;patTon[p]=(patTon[p]||0)+ton;patReps[p]=(patReps[p]||0)+reps;
+    modFreq[m]=(modFreq[m]||0)+1;modTon[m]=(modTon[m]||0)+ton;
+    if(sub){if(!patSub[p])patSub[p]={};if(!patSub[p][sub])patSub[p][sub]={freq:0,ton:0};patSub[p][sub].freq++;patSub[p][sub].ton+=ton;}
+    if(!mvTmp[nm])mvTmp[nm]={sd:new Set(),reps:0,ton:0,pat:p,mod:m,sub:sub||null,last:""};
+    mvTmp[nm].sd.add(date);mvTmp[nm].reps+=reps;mvTmp[nm].ton+=ton;
+    if(date>mvTmp[nm].last)mvTmp[nm].last=date;
+  };
+
+  for(const sess of filt){
+    for(const b of(sess.blocks||[])){
+      if(b.k==="strength"||b.k==="accessory"){
+        const pat=b.pat||b.p||"other",mod=b.mod||(b.pat==="mono"?"monostructural":"weightlifting"),sub=b.sub||null;
+        const reps=(b.sets||[]).reduce((s,x)=>s+(x.r||0),0),ton=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);
+        addMov(b.mov||"?",pat,mod,sub,reps,ton,sess.date);
+      }
+      if(b.k==="metcon"){
+        const tdv=b.td||"unk";if(td[tdv]!==undefined)td[tdv]++;
+        for(const pm of(b.pm||[])){
+          const pat=pm.pat||pm.p||"other";
+          const mod=pm.mod||(pat==="mono"?"monostructural":pat==="core"||pat==="push"||pat==="pull"?"gymnastics":"other");
+          addMov(pm.n||"?",pat,mod,pm.sub||null,pm.r||0,(pm.r||0)*(pm.w||0),sess.date);
+        }
       }
     }
-  }}
-  return{freq,ton,td,mvs,cnt:filt.length};
+  }
+
+  const mvs={};
+  for(const[n,d]of Object.entries(mvTmp))mvs[n]={freq:d.sd.size,reps:d.reps,ton:d.ton,pat:d.pat,mod:d.mod,sub:d.sub,last:d.last};
+  return{patFreq,patTon,patReps,modFreq,modTon,patSub,td,mvs,cnt:filt.length};
+}
+
+/* ── SVG Components ─────────────────────────── */
+function Donut({data,size=150}){
+  if(!data||!data.length)return html`<div style="color:#B0A89E;font-size:12px;padding:16px;text-align:center">No data</div>`;
+  const total=data.reduce((a,d)=>a+d.val,0);if(!total)return html`<div style="color:#B0A89E;font-size:12px;padding:16px;text-align:center">No data</div>`;
+  const cx=size/2,cy=size/2,r=size*.35,ir=size*.2;let cum=-Math.PI/2;
+  return html`<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <svg width=${size} height=${size}>${data.map((d,i)=>{
+      const ang=(d.val/total)*Math.PI*2;const sa=cum;cum+=ang;const ea=cum;
+      const x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(ea),y2=cy+r*Math.sin(ea);
+      const ix1=cx+ir*Math.cos(ea),iy1=cy+ir*Math.sin(ea),ix2=cx+ir*Math.cos(sa),iy2=cy+ir*Math.sin(sa);
+      return html`<path key=${i} d="M${x1},${y1} A${r},${r} 0 ${ang>Math.PI?1:0} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${ang>Math.PI?1:0} 0 ${ix2},${iy2} Z" fill=${d.color||"#4A6FA5"}/>`;
+    })}</svg>
+    <div style="font-size:11px">${data.map((d,i)=>html`<div key=${i} style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="width:10px;height:10px;border-radius:2px;background:${d.color||"#4A6FA5"}"></div>
+      <span>${d.label}: ${d.val}</span>
+    </div>`)}</div>
+  </div>`;
+}
+
+function Spark({hist,isTime,color}){
+  if(!hist||hist.length<2)return html`<span style="color:#B0A89E;font-size:10px">—</span>`;
+  const vals=hist.map(h=>typeof h==="number"?h:h.v??h.s??0);
+  const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
+  const W=80,H=24,p=2,step=(W-p*2)/(hist.length-1);
+  const pts=vals.map((v,i)=>{const x=p+i*step;const y=isTime?p+((v-mn)/rng)*(H-p*2):(H-p)-((v-mn)/rng)*(H-p*2);return x+","+y;}).join(" ");
+  const sc=color||"#4A6FA5";
+  return html`<svg width=${W} height=${H} style="display:block">
+    <polyline points=${pts} fill="none" stroke=${sc} stroke-width="1.5" stroke-linejoin="round"/>
+    ${vals.map((v,i)=>{const x=p+i*step;const y=isTime?p+((v-mn)/rng)*(H-p*2):(H-p)-((v-mn)/rng)*(H-p*2);
+      return html`<circle key=${i} cx=${x} cy=${y} r=${i===vals.length-1?3:1.5} fill=${i===vals.length-1?"#C07D3A":sc}/>`;
+    })}
+  </svg>`;
+}
+
+function Delta({cur,prev}){
+  if(prev===0||prev===undefined)return html`<span class="delta-eq">—</span>`;
+  const pct=Math.round(((cur-prev)/prev)*100);
+  if(pct===0)return html`<span class="delta-eq">±0%</span>`;
+  if(pct>0)return html`<span class="delta-up">▲${pct}%</span>`;
+  return html`<span class="delta-dn">▼${Math.abs(pct)}%</span>`;
+}
+
+/* ── Pattern/Modality Balance Table ─────────── */
+function BalanceTable({label,keys,meta,curFreq,curTon,bucketAggs,freqKey}){
+  const rows=keys.map(k=>{
+    const freqHist=(bucketAggs||[]).map(b=>(freqKey==="mod"?b.modFreq:b.patFreq)[k]||0);
+    const cur=freqHist[freqHist.length-1]??0,prev=freqHist[freqHist.length-2]??0;
+    return{k,label:meta[k]?.l||k,color:meta[k]?.c||"#AAA",freq:curFreq[k]||0,ton:curTon[k]||0,freqHist,cur,prev};
+  }).filter(r=>r.freq>0||r.ton>0);
+  if(!rows.length)return html`<div style="color:#B0A89E;font-size:12px;padding:12px 0">No data</div>`;
+  return html`<table><thead><tr>
+    <th>${label}</th><th style="text-align:right">Freq</th><th style="text-align:right">Tonnage</th><th>Trend</th><th>Δ Prior</th>
+  </tr></thead><tbody>${rows.map(r=>html`<tr key=${r.k}>
+    <td><span style="font-size:10px;font-weight:700;color:${r.color}">${r.label}</span></td>
+    <td style="text-align:right;font-weight:600">${r.freq}</td>
+    <td style="text-align:right;color:${r.ton>0?"#B03A2E":"#B0A89E"}">${r.ton>0?r.ton.toLocaleString():"-"}</td>
+    <td><${Spark} hist=${r.freqHist} color=${r.color}/></td>
+    <td><${Delta} cur=${r.cur} prev=${r.prev}/></td>
+  </tr>`)}</tbody></table>`;
 }
 
 /* ── Block Renderer ────────────────────────── */
@@ -181,10 +233,9 @@ function RBlk({b}){
       <span class="kb ${kc}">${kl}</span>
       <span style="font-weight:600;font-size:12px">${b.mov||b.fmt||""}</span>
     </div>
-    ${(b.k==="strength"||b.k==="accessory")&&b.sets?.length>0&&html`
-      <div style="display:flex;flex-wrap:wrap;gap:4px">
-        ${b.sets.map(s=>html`<span class="set-chip"><span style="color:#7A7168">${s.r}×</span><span style="font-weight:700;color:#B03A2E">${s.w}</span></span>`)}
-      </div>`}
+    ${(b.k==="strength"||b.k==="accessory")&&b.sets?.length>0&&html`<div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${b.sets.map((s,i)=>html`<span key=${i} class="set-chip"><span style="color:#7A7168">${s.r}×</span><span style="font-weight:700;color:#B03A2E">${s.w}</span></span>`)}
+    </div>`}
     ${b.k==="metcon"&&html`<div style="font-size:11px;line-height:1.6">
       ${b.mv&&html`<div style="color:#7A7168;margin-bottom:3px">${b.mv}</div>`}
       <div style="display:flex;align-items:center;gap:8px">
@@ -203,57 +254,61 @@ function App(){
   const[prs,setPrs]=useState([]);
   const[bench,setBench]=useState([]);
   const[exp,setExp]=useState(null);
-  const[rng,setRng]=useState("4w");
-
-  // Input state
+  const[rng,setRng]=useState("month");
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState("");
   const[parsing,setParsing]=useState(false);
   const[parseErr,setParseErr]=useState("");
   const[parseOk,setParseOk]=useState("");
 
-  // Load data
   useEffect(()=>{
     (async()=>{
       await sbInit();
-      try{
-        const[s,p,b]=await Promise.all([
-          sbGet('sessions','order=date.desc'),
-          sbGet('prs','order=category,name'),
-          sbGet('benchmarks','order=name')
-        ]);
-        setSess(s);setPrs(p);setBench(b);
-      }catch(e){console.error('Load error',e);}
+      try{const[s,p,b]=await Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]);setSess(s);setPrs(p);setBench(b);}
+      catch(e){console.error('Load error',e);}
       setReady(true);
     })();
   },[]);
 
-  // Derived data
   const lifts=useMemo(()=>prs.filter(p=>p.category==='lift'),[prs]);
   const gymPrs=useMemo(()=>prs.filter(p=>p.category==='gymnastics'),[prs]);
   const cardioPrs=useMemo(()=>prs.filter(p=>p.category==='cardio'),[prs]);
 
-  const ws=weekStart(new Date().toISOString().slice(0,10));
-  const we=useMemo(()=>{const d=new Date(ws+"T12:00:00");d.setDate(d.getDate()+6);return d.toISOString().slice(0,10);},[ws]);
-  const wk=useMemo(()=>agg(sess,ws,we),[sess,ws,we]);
-  const totalTon=useMemo(()=>Object.values(wk.ton).reduce((a,b)=>a+b,0),[wk]);
-  const freqD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:wk.freq[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[wk]);
-  const tonD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:wk.ton[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[wk]);
-  const tdD=useMemo(()=>[{label:"Short (<7m)",val:wk.td.short},{label:"Medium (7-15m)",val:wk.td.med},{label:"Long (15m+)",val:wk.td.long}].filter(x=>x.val>0),[wk]);
+  // Volume tab range
+  const{start:raStart,end:raEnd}=useMemo(()=>calRange(rng),[rng]);
+  const ra=useMemo(()=>agg(sess,raStart,raEnd),[sess,raStart,raEnd]);
+  const mvTbl=useMemo(()=>Object.entries(ra.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.freq-a.freq),[ra]);
 
-  const ra=useMemo(()=>{
-    const today=new Date().toISOString().slice(0,10);let start="2000-01-01";
-    if(rng==="1w")start=ws;
-    else if(rng==="4w"){const d=new Date();d.setDate(d.getDate()-28);start=d.toISOString().slice(0,10);}
-    else if(rng==="3m"){const d=new Date();d.setMonth(d.getMonth()-3);start=d.toISOString().slice(0,10);}
-    else if(rng==="1y"){const d=new Date();d.setFullYear(d.getFullYear()-1);start=d.toISOString().slice(0,10);}
-    return agg(sess,start,today);
-  },[sess,rng,ws]);
-  const raFreqD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:ra.freq[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[ra]);
-  const raTonD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:ra.ton[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[ra]);
-  const mvTbl=useMemo(()=>Object.entries(ra.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.cnt-a.cnt),[ra]);
+  // Sparkline buckets
+  const sparkN=useMemo(()=>({week:6,month:6,quarter:4,year:3,all:0})[rng]||0,[rng]);
+  const buckets=useMemo(()=>sparkN>0?periodBuckets(rng,sparkN):[],[rng,sparkN]);
+  const bucketAggs=useMemo(()=>buckets.map(b=>agg(sess,b.start,b.end)),[sess,buckets]);
 
-  // Submit workout
+  // Dashboard: trailing calendar month
+  const today=new Date().toISOString().slice(0,10);
+  const monthStart=today.slice(0,7)+"-01";
+  const mAgg=useMemo(()=>agg(sess,monthStart,today),[sess,monthStart,today]);
+
+  // Streak
+  const streak=useMemo(()=>consecutiveDays(sess),[sess]);
+  const restDay=useMemo(()=>lastRestDay(sess),[sess]);
+  const streakCls=streak>=7?"streak-red":streak>=5?"streak-yellow":"streak-green";
+
+  // Ratios (trailing month, by frequency)
+  const pushPull=useMemo(()=>{const p=mAgg.patFreq.push||0,q=mAgg.patFreq.pull||0;if(!p&&!q)return"—";if(!q)return p+":0";return(p/q).toFixed(1)+":1";},[mAgg]);
+  const sqHinge=useMemo(()=>{const s=mAgg.patFreq.squat||0,h=mAgg.patFreq.hinge||0;if(!s&&!h)return"—";if(!h)return s+":0";return(s/h).toFixed(1)+":1";},[mAgg]);
+
+  // Sub-category breakdown (trailing month)
+  const pushSub=useMemo(()=>mAgg.patSub.push||{},[mAgg]);
+  const pullSub=useMemo(()=>mAgg.patSub.pull||{},[mAgg]);
+
+  // Donuts (trailing month)
+  const modDonut=useMemo(()=>MKEYS.map(k=>({label:MOD[k].l,val:mAgg.modFreq[k]||0,color:MOD[k].c})).filter(x=>x.val>0),[mAgg]);
+  const tdDonut=useMemo(()=>[{label:"Short (<7m)",val:mAgg.td.short,color:"#C0392B"},{label:"Medium (7-20m)",val:mAgg.td.med,color:"#E67E22"},{label:"Long (20m+)",val:mAgg.td.long,color:"#2E3F5C"}].filter(x=>x.val>0),[mAgg]);
+
+  // Volume tab time domain donut
+  const raTdD=useMemo(()=>[{label:"Short",val:ra.td.short,color:"#C0392B"},{label:"Medium",val:ra.td.med,color:"#E67E22"},{label:"Long",val:ra.td.long,color:"#2E3F5C"}].filter(x=>x.val>0),[ra]);
+
   async function submitWorkout(){
     if(!inText.trim()||parsing)return;
     setParsing(true);setParseErr("");setParseOk("");
@@ -261,21 +316,14 @@ function App(){
       const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inText,date:inDate})});
       if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
       const parsed=await r.json();
-
-      // Save to Supabase (upsert by date)
-      const row={date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||''};
-      await sbPost('sessions',[row]);
-
-      // Refresh sessions
+      await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||''}]);
       const updated=await sbGet('sessions','order=date.desc');
-      setSess(updated);
-      setParseOk("Saved "+fd(inDate));setInText("");setExp(inDate);
+      setSess(updated);setParseOk("Saved "+fd(inDate));setInText("");setExp(inDate);
       setTimeout(()=>setParseOk(""),5000);
     }catch(e){setParseErr(e.message);}
     finally{setParsing(false);}
   }
 
-  // Delete session
   async function delSess(date){
     if(!confirm("Delete session for "+fd(date)+"?"))return;
     await sbDelete('sessions','date=eq.'+date);
@@ -284,35 +332,47 @@ function App(){
 
   if(!ready)return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#7A7168"><div class="spin"></div><span style="margin-left:10px">Loading...</span></div>`;
 
-  const tabs=["Dashboard","Workout Log","Volume","PRs"];
-
   return html`<div>
     <div class="hdr">
       <div class="logo">⚡</div>
       <div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div>
     </div>
     <div class="nav">
-      ${tabs.map(t=>html`<button class=${tab===t?"active":""} onClick=${()=>setTab(t)}>${t}</button>`)}
+      ${["Dashboard","Workout Log","Volume","PRs"].map(t=>html`<button key=${t} class=${tab===t?"active":""} onClick=${()=>setTab(t)}>${t}</button>`)}
     </div>
     <div class="body">
 
       ${tab==="Dashboard"&&html`<div>
-        <div class="g3" style="margin-bottom:14px">
-          <div class="sc"><div class="sv">${wk.cnt}</div><div class="sl">Sessions This Week</div></div>
-          <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+"k":"0"}</div><div class="sl">Lbs This Week</div></div>
-          <div class="sc"><div class="sv">${sess.length}</div><div class="sl">Total Sessions</div></div>
+        <div class="g2" style="margin-bottom:14px">
+          <div class="sc">
+            <div class="sv ${streakCls}">${streak}</div>
+            <div class="sl">Consecutive Training Days</div>
+            ${streak>=7&&html`<div style="font-size:9px;color:#B03A2E;margin-top:5px;font-weight:700;letter-spacing:1px">REST DAY NEEDED</div>`}
+            ${streak>=5&&streak<7&&html`<div style="font-size:9px;color:#B5651D;margin-top:5px;font-weight:700;letter-spacing:1px">CONSIDER RESTING</div>`}
+          </div>
+          <div class="sc">
+            <div class="sv">${restDay?restDay.daysAgo===0?"Today":restDay.daysAgo===1?"Yesterday":restDay.daysAgo+"d ago":"—"}</div>
+            <div class="sl">Last Rest Day</div>
+            ${restDay&&restDay.daysAgo>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:5px">${fd(restDay.date)}</div>`}
+          </div>
         </div>
+
+        <div class="g4" style="margin-bottom:14px">
+          <div class="sc"><div class="sv" style="font-size:22px">${pushPull}</div><div class="sl">Push:Pull (Month)</div></div>
+          <div class="sc"><div class="sv" style="font-size:22px">${sqHinge}</div><div class="sl">Squat:Hinge (Month)</div></div>
+          <div class="sc">
+            <div class="sv" style="font-size:20px">${(pushSub.vertical||0)+(pushSub.horizontal||0)>0?(pushSub.vertical||0)+":"+(pushSub.horizontal||0):"—"}</div>
+            <div class="sl">Vert:Horiz Push (Month)</div>
+          </div>
+          <div class="sc">
+            <div class="sv" style="font-size:20px">${(pullSub.vertical||0)+(pullSub.horizontal||0)>0?(pullSub.vertical||0)+":"+(pullSub.horizontal||0):"—"}</div>
+            <div class="sl">Vert:Horiz Pull (Month)</div>
+          </div>
+        </div>
+
         <div class="g2">
-          <div class="card"><div class="ct">Pattern Frequency (This Week)</div><${HBar} data=${freqD}/></div>
-          <div class="card"><div class="ct">Time Domain Split</div><${Donut} data=${tdD}/></div>
-        </div>
-        ${tonD.length>0&&html`<div class="card"><div class="ct">Tonnage by Pattern (This Week)</div><${HBar} data=${tonD}/></div>`}
-        <div class="card"><div class="ct">Recent Sessions</div>
-          ${sess.length===0?html`<div style="color:#B0A89E;font-size:12px;padding:12px 0">No sessions yet. Log your first workout.</div>`:
-          sess.slice(0,5).map(s=>html`<div style="padding:6px 0;border-bottom:1px solid #F0EDE8;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:600;font-size:12px">${fd(s.date)}</span>
-            <div style="display:flex;gap:3px">${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k}">${{strength:"STR",metcon:"MET",accessory:"ACC"}[b.k]||b.k}</span>`)}</div>
-          </div>`)}
+          <div class="card"><div class="ct">Modality Balance (Month)</div><${Donut} data=${modDonut}/></div>
+          <div class="card"><div class="ct">Time Domain Balance (Month)</div><${Donut} data=${tdDonut}/></div>
         </div>
       </div>`}
 
@@ -334,21 +394,20 @@ function App(){
           ${parseErr&&html`<div class="err" style="margin-top:8px">${parseErr}</div>`}
           ${parseOk&&html`<div class="ok">${parseOk}</div>`}
         </div>
-
         <div class="card"><div class="ct">Session History</div>
           ${sess.length===0?html`<div style="color:#B0A89E;font-size:12px">No sessions yet.</div>`:
-          sess.map(s=>{const o=exp===s.date;return html`<div>
+          sess.map(s=>{const o=exp===s.date;return html`<div key=${s.date}>
             <div class="sr ${o?"open":""}" onClick=${()=>setExp(o?null:s.date)}>
               <div style="display:flex;justify-content:space-between;align-items:center">
                 <div><span style="font-weight:700;font-size:12px;color:#2E3F5C">${fd(s.date)}</span><span style="color:#7A7168;font-size:10px;margin-left:8px">${(s.blocks||[]).length}b</span></div>
                 <div style="display:flex;gap:3px;align-items:center">
-                  ${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k}">${{strength:"STR",metcon:"MET",accessory:"ACC"}[b.k]||b.k}</span>`)}
+                  ${(s.blocks||[]).map((b,i)=>html`<span key=${i} class="kb kb-${b.k}">${{strength:"STR",metcon:"MET",accessory:"ACC"}[b.k]||b.k}</span>`)}
                   <span style="margin-left:6px;color:#7A7168;font-size:12px">${o?"▲":"▼"}</span>
                 </div>
               </div>
             </div>
             ${o&&html`<div class="sd">
-              ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
+              ${(s.blocks||[]).map((b,i)=>html`<${RBlk} key=${i} b=${b}/>`)}
               ${s.raw_text&&html`<div style="margin:6px 0 10px;padding:8px;background:#FBF1E3;border-left:3px solid #C07D3A;border-radius:4px;font-size:10px;color:#7A7168;white-space:pre-wrap">${s.raw_text}</div>`}
               <div style="display:flex;justify-content:flex-end;padding-bottom:4px">
                 <button style="background:transparent;color:#B03A2E;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>delSess(s.date)}>Delete</button>
@@ -359,55 +418,83 @@ function App(){
       </div>`}
 
       ${tab==="Volume"&&html`<div>
-        <div style="display:flex;gap:3px;margin-bottom:14px">
-          ${[["1w","Week"],["4w","4 Wk"],["3m","3 Mo"],["1y","Year"],["all","All"]].map(([k,l])=>
-            html`<button class="rn ${rng===k?"active":""}" onClick=${()=>setRng(k)}>${l}</button>`)}
+        <div style="display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap">
+          ${[["week","Week"],["month","Month"],["quarter","Quarter"],["year","Year"],["all","All Time"]].map(([k,l])=>
+            html`<button key=${k} class="rn ${rng===k?"active":""}" onClick=${()=>setRng(k)}>${l}</button>`)}
         </div>
         <div class="g3" style="margin-bottom:14px">
           <div class="sc"><div class="sv">${ra.cnt}</div><div class="sl">Sessions</div></div>
-          <div class="sc"><div class="sv">${(()=>{const t=Object.values(ra.ton).reduce((a,b)=>a+b,0);return t>0?(t/1000).toFixed(1)+"k":"0";})()}</div><div class="sl">Tonnage (lbs)</div></div>
+          <div class="sc"><div class="sv">${(()=>{const t=Object.values(ra.patTon).reduce((a,b)=>a+b,0);return t>0?(t/1000).toFixed(1)+"k":"0";})()}</div><div class="sl">Tonnage (lbs)</div></div>
           <div class="sc"><div class="sv">${Object.keys(ra.mvs).length}</div><div class="sl">Unique Moves</div></div>
         </div>
+
         <div class="g2">
-          <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${raFreqD}/></div>
-          <div class="card"><div class="ct">Tonnage by Pattern</div><${HBar} data=${raTonD}/></div>
+          <div class="card"><div class="ct">Pattern Balance</div>
+            <${BalanceTable} label="Pattern" keys=${PKEYS} meta=${PAT} curFreq=${ra.patFreq} curTon=${ra.patTon} bucketAggs=${bucketAggs} freqKey="pat"/>
+          </div>
+          <div class="card"><div class="ct">Modality Balance</div>
+            <${BalanceTable} label="Modality" keys=${MKEYS} meta=${MOD} curFreq=${ra.modFreq} curTon=${ra.modTon} bucketAggs=${bucketAggs} freqKey="mod"/>
+          </div>
         </div>
+
+        <div class="card"><div class="ct">Time Domain</div><${Donut} data=${raTdD}/></div>
+
         <div class="card"><div class="ct">Movement Frequency</div>
-          <table><thead><tr><th>Movement</th><th>Pattern</th><th style="text-align:right">Count</th><th style="text-align:right">Tonnage</th><th>Last</th></tr></thead>
-          <tbody>${mvTbl.slice(0,30).map(m=>html`<tr>
-            <td>${m.n}</td>
-            <td><span style="font-size:10px;font-weight:600;color:${PAT[m.pat]?.c||"#7A7168"}">${PAT[m.pat]?.l||m.pat}</span></td>
-            <td style="text-align:right;font-weight:600">${m.cnt}</td>
+          <div style="overflow-x:auto">
+          <table style="min-width:700px"><thead><tr>
+            <th>Movement</th>
+            <th>Pattern</th>
+            <th>Modality</th>
+            <th style="text-align:right">Frequency</th>
+            <th style="text-align:right">Reps</th>
+            <th style="text-align:right">Avg Load/Rep</th>
+            <th style="text-align:right">Tonnage</th>
+            <th>Last</th>
+          </tr></thead>
+          <tbody>${mvTbl.slice(0,40).map(m=>html`<tr key=${m.n}>
+            <td style="font-weight:600">${m.n}</td>
+            <td><span style="font-size:10px;font-weight:600;color:${PAT[m.pat]?.c||"#7A7168"}">${PAT[m.pat]?.l||m.pat}</span>${m.sub?html` <span style="color:#B0A89E;font-size:10px">(${m.sub})</span>`:""}</td>
+            <td><span style="font-size:10px;font-weight:600;color:${MOD[m.mod]?.c||"#7A7168"}">${MOD[m.mod]?.l||m.mod||"—"}</span></td>
+            <td style="text-align:right;font-weight:600">${m.freq}</td>
+            <td style="text-align:right">${m.reps>0?m.reps.toLocaleString():"-"}</td>
+            <td style="text-align:right">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps).toLocaleString():"-"}</td>
             <td style="text-align:right;color:${m.ton>0?"#B03A2E":"#B0A89E"}">${m.ton>0?m.ton.toLocaleString():"-"}</td>
-            <td class="mut">${fd(m.last)}</td>
+            <td class="mut" style="white-space:nowrap">${fd(m.last)}</td>
           </tr>`)}</tbody></table>
+          </div>
         </div>
       </div>`}
 
       ${tab==="PRs"&&html`<div>
         <div class="card"><div class="ct">Lifting PRs</div>
           <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th>Trend</th></tr></thead>
-          <tbody>${lifts.map(l=>html`<tr>
+          <tbody>${lifts.map(l=>html`<tr key=${l.name}>
             <td>${l.name}</td><td class="prv">${l.pr_value} lbs</td><td class="mut">${fd(l.date)}</td><td><${Spark} hist=${l.history}/></td>
           </tr>`)}</tbody></table>
         </div>
         <div class="card"><div class="ct">Gymnastics PRs</div>
           <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th>Trend</th></tr></thead>
-          <tbody>${gymPrs.map(l=>html`<tr>
+          <tbody>${gymPrs.map(l=>html`<tr key=${l.name}>
             <td>${l.name}</td><td class="prv">${l.pr_value} reps</td><td class="mut">${fd(l.date)}</td><td><${Spark} hist=${l.history}/></td>
           </tr>`)}</tbody></table>
         </div>
         <div class="card"><div class="ct">Cardio PRs</div>
           <table><thead><tr><th>Event</th><th>PR</th><th>Date</th><th>Trend</th></tr></thead>
-          <tbody>${cardioPrs.map(c=>html`<tr>
+          <tbody>${cardioPrs.map(c=>html`<tr key=${c.name}>
             <td>${c.name}</td><td class="prv">${c.pr_display||c.pr_value}</td><td class="mut">${fd(c.date)}</td><td><${Spark} hist=${c.history} isTime=${true}/></td>
           </tr>`)}</tbody></table>
         </div>
         <div class="card"><div class="ct">Benchmark WODs</div>
-          ${bench.map(b=>html`<div style="margin-bottom:14px">
-            <div style="font-weight:700;font-size:12px;color:#2E3F5C;margin-bottom:6px">${b.name}${b.notes&&html`<span style="color:#7A7168;font-weight:400;font-size:10px;margin-left:6px">${b.notes}</span>`}</div>
-            <table><thead><tr><th>Date</th><th>Score</th></tr></thead>
-            <tbody>${(b.scores||[]).map(s=>html`<tr><td class="mut">${fd(s.d)}</td><td class="prv">${s.v}</td></tr>`)}</tbody></table>
+          ${bench.map(b=>html`<div key=${b.name} style="margin-bottom:20px">
+            <div style="font-weight:700;font-size:13px;color:#2E3F5C;margin-bottom:8px">${b.name}</div>
+            <div style="overflow-x:auto">
+            <table style="min-width:500px"><thead><tr><th style="white-space:nowrap">Date</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>${(b.scores||[]).map((s,i)=>html`<tr key=${i}>
+              <td class="mut" style="white-space:nowrap">${fd(s.d)}</td>
+              <td class="prv" style="white-space:nowrap">${s.v}</td>
+              <td style="font-size:11px;color:#7A7168;line-height:1.5">${s.note||""}</td>
+            </tr>`)}</tbody></table>
+            </div>
           </div>`)}
         </div>
       </div>`}
