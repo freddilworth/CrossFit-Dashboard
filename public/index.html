@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CrossFit Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#F5F2EE;color:#2C2A27;min-height:100vh}
+#app{min-height:100vh}
+.hdr{background:#2E3F5C;padding:14px 24px;display:flex;align-items:center;gap:12px}
+.hdr h1{font-size:18px;font-weight:700;letter-spacing:1px;color:#fff}
+.hdr .sub{font-size:10px;color:#9BAABF;letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.logo{width:30px;height:30px;background:#B03A2E;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff}
+.nav{display:flex;gap:2px;padding:8px 20px;background:#F0EDE8;border-bottom:1px solid #DDD7CE;flex-wrap:wrap}
+.nav button{padding:7px 15px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#7A7168;font-family:inherit;transition:all .15s}
+.nav button.active{background:#2E3F5C;color:#fff}
+.body{padding:20px 24px;max-width:1100px;margin:0 auto}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.card{background:#FDFBF8;border:1px solid #DDD7CE;border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ct{font-size:10px;font-weight:700;color:#2E3F5C;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px}
+.sc{background:#E8EDF5;border:1px solid #C9C0B4;border-radius:10px;padding:16px;text-align:center}
+.sv{font-size:26px;font-weight:700;color:#2E3F5C;line-height:1}
+.sl{font-size:9px;color:#7A7168;letter-spacing:2px;text-transform:uppercase;margin-top:5px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:6px 8px;font-size:10px;color:#7A7168;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #DDD7CE}
+td{padding:7px 8px;font-size:12px;border-bottom:1px solid #DDD7CE}
+tr:nth-child(even) td{background:#F0EDE8}
+.prv{font-weight:700;color:#B03A2E;font-size:13px}
+.mut{color:#7A7168;font-size:10px}
+.inp{background:#F5F2EE;border:1px solid #DDD7CE;color:#2C2A27;border-radius:6px;padding:7px 10px;font-size:12px;width:100%;box-sizing:border-box;outline:none;font-family:inherit}
+textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
+.btn{background:#2E3F5C;color:#fff;border:none;border-radius:6px;padding:9px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-s{background:#F0EDE8;color:#2E3F5C;border:1px solid #DDD7CE;border-radius:5px;padding:4px 10px;font-weight:600;font-size:11px;cursor:pointer;font-family:inherit}
+.rn{padding:4px 10px;border-radius:4px;border:1px solid #DDD7CE;background:transparent;color:#7A7168;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.rn.active{border-color:#2E3F5C;background:#2E3F5C;color:#fff}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px}
+.badge-rx{background:#D8EFE3;color:#2D6A4F}
+.badge-sc{background:#FAE8E6;color:#B03A2E}
+.kb{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase;display:inline-block}
+.kb-strength{background:#FAE8E6;color:#B03A2E}
+.kb-metcon{background:#E8EDF5;color:#2E3F5C}
+.kb-accessory{background:#FBF1E3;color:#B5651D}
+.bc{border:1px solid #DDD7CE;border-radius:7px;padding:10px;margin-bottom:8px;background:#F5F2EE}
+.sr{padding:10px 14px;border-radius:7px;margin-bottom:5px;background:#FDFBF8;border:1px solid #DDD7CE;cursor:pointer;transition:all .15s}
+.sr.open{background:#E8EDF5;border-color:#2E3F5C;border-radius:7px 7px 0 0;margin-bottom:0}
+.sd{padding:12px 14px 4px;margin-bottom:8px;background:#FDFBF8;border:1px solid #DDD7CE;border-top:none;border-radius:0 0 7px 7px}
+.set-chip{background:#FDFBF8;border:1px solid #DDD7CE;border-radius:3px;padding:3px 7px;font-size:11px;font-family:monospace;display:inline-block;margin:2px}
+.err{background:#FAE8E6;color:#B03A2E;padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px}
+.ok{color:#2D6A4F;font-size:12px;font-weight:600;margin-top:8px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #DDD7CE;border-top-color:#2E3F5C;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sec-title{font-size:13px;font-weight:700;color:#2E3F5C;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #DDD7CE}
+@media(max-width:700px){.g2,.g3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#7A7168">Loading...</div></div>
+<script type="module">
+import{h,render}from'https://esm.sh/preact@10.19.3';
+import{useState,useEffect,useMemo,useCallback}from'https://esm.sh/preact@10.19.3/hooks';
+import htm from'https://esm.sh/htm@3.1.1';
+const html=htm.bind(h);
+
+/* ── Supabase REST helpers ─────────────────── */
+let SB_URL='',SB_KEY='';
+
+async function sbInit(){
+  try{const r=await fetch('/api/config');const d=await r.json();SB_URL=d.supabaseUrl;SB_KEY=d.supabaseKey;}
+  catch(e){console.error('Config load failed',e);}
+}
+
+function sbHeaders(){return{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};}
+
+async function sbGet(table,params=''){
+  const r=await fetch(SB_URL+'/rest/v1/'+table+'?'+params,{headers:sbHeaders()});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function sbPost(table,data){
+  const r=await fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{...sbHeaders(),'Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function sbPatch(table,match,data){
+  const r=await fetch(SB_URL+'/rest/v1/'+table+'?'+match,{method:'PATCH',headers:sbHeaders(),body:JSON.stringify(data)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function sbDelete(table,match){
+  const r=await fetch(SB_URL+'/rest/v1/'+table+'?'+match,{method:'DELETE',headers:sbHeaders()});
+  if(!r.ok)throw new Error(await r.text());
+}
+
+/* ── Pattern meta ──────────────────────────── */
+const PAT={push:{l:"Push",c:"#C0392B"},pull:{l:"Pull",c:"#2E86C1"},squat:{l:"Squat",c:"#E67E22"},hinge:{l:"Hinge",c:"#27AE60"},core:{l:"Core",c:"#8E44AD"},mono:{l:"Mono",c:"#5D6D7E"},olympic:{l:"Olympic",c:"#C07D3A"},other:{l:"Other",c:"#AAA"}};
+const PKEYS=["push","pull","squat","hinge","core","mono","olympic"];
+
+function fd(d){if(!d)return"";return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
+function weekStart(ds){const d=new Date(ds+"T12:00:00");const dy=d.getDay();d.setDate(d.getDate()-(dy===0?6:dy-1));return d.toISOString().slice(0,10);}
+
+/* ── SVG Charts ────────────────────────────── */
+function HBar({data,w=380,ht=180}){
+  if(!data.length)return html`<div style="color:#B0A89E;font-size:12px;padding:16px;text-align:center">No data yet</div>`;
+  const mx=Math.max(...data.map(d=>d.val),1);
+  const bh=Math.min(22,ht/data.length-4);
+  const lw=70;
+  return html`<svg width=${w} height=${Math.max(ht,data.length*(bh+4)+8)} style="display:block;max-width:100%">
+    ${data.map((d,i)=>{const y=i*(bh+4)+4;const bw=Math.max(2,(d.val/mx)*(w-lw-60));
+      return html`<g key=${i}>
+        <text x=${lw-6} y=${y+bh/2+4} text-anchor="end" font-size="11" fill="#2C2A27">${d.label}</text>
+        <rect x=${lw} y=${y} width=${bw} height=${bh} rx="3" fill=${d.color||"#4A6FA5"}/>
+        <text x=${lw+bw+6} y=${y+bh/2+4} font-size="11" fill="#7A7168">${d.val>=1000?(d.val/1000).toFixed(1)+"k":d.val}</text>
+      </g>`;
+    })}
+  </svg>`;
+}
+
+function Donut({data,size=150}){
+  if(!data.length)return html`<div style="color:#B0A89E;font-size:12px;padding:16px;text-align:center">No data</div>`;
+  const total=data.reduce((a,d)=>a+d.val,0);const cx=size/2,cy=size/2,r=size*.35,ir=size*.2;
+  let cum=-Math.PI/2;const colors=["#C0392B","#2E86C1","#2E3F5C","#7A7168"];
+  return html`<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <svg width=${size} height=${size}>${data.map((d,i)=>{
+      const ang=(d.val/total)*Math.PI*2;const sa=cum;cum+=ang;const ea=cum;
+      const x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(ea),y2=cy+r*Math.sin(ea);
+      const ix1=cx+ir*Math.cos(ea),iy1=cy+ir*Math.sin(ea),ix2=cx+ir*Math.cos(sa),iy2=cy+ir*Math.sin(sa);
+      const lg=ang>Math.PI?1:0;
+      return html`<path d="M${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${lg} 0 ${ix2},${iy2} Z" fill=${colors[i%4]}/>`;
+    })}</svg>
+    <div style="font-size:11px">${data.map((d,i)=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="width:10px;height:10px;border-radius:2px;background:${colors[i%4]}"></div>
+      <span>${d.label}: ${d.val}</span>
+    </div>`)}</div>
+  </div>`;
+}
+
+function Spark({hist,isTime}){
+  if(!hist||hist.length<2)return html`<span style="color:#B0A89E;font-size:10px">—</span>`;
+  const vals=hist.map(h=>h.v??h.s);const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
+  const W=100,H=28,p=3,step=(W-p*2)/(hist.length-1);
+  const pts=vals.map((v,i)=>{const x=p+i*step;const y=isTime?p+((v-mn)/rng)*(H-p*2):(H-p)-((v-mn)/rng)*(H-p*2);return x+","+y;}).join(" ");
+  return html`<svg width=${W} height=${H} style="display:block">
+    <polyline points=${pts} fill="none" stroke="#4A6FA5" stroke-width="1.5" stroke-linejoin="round"/>
+    ${vals.map((v,i)=>{const x=p+i*step;const y=isTime?p+((v-mn)/rng)*(H-p*2):(H-p)-((v-mn)/rng)*(H-p*2);
+      return html`<circle cx=${x} cy=${y} r=${i===vals.length-1?3:1.5} fill=${i===vals.length-1?"#C07D3A":"#4A6FA5"}/>`;
+    })}
+  </svg>`;
+}
+
+/* ── Aggregation ───────────────────────────── */
+function agg(sessions,start,end){
+  const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
+  const freq={},ton={},td={short:0,med:0,long:0},mvs={};
+  for(const sess of filt){for(const b of(sess.blocks||[])){
+    if(b.k==="strength"||b.k==="accessory"){
+      const p=b.pat||"other";freq[p]=(freq[p]||0)+1;
+      const t=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);ton[p]=(ton[p]||0)+t;
+      const nm=b.mov||"?";if(!mvs[nm])mvs[nm]={cnt:0,ton:0,pat:p,last:""};
+      mvs[nm].cnt++;mvs[nm].ton+=t;if(sess.date>mvs[nm].last)mvs[nm].last=sess.date;
+    }
+    if(b.k==="metcon"){
+      const tdv=b.td||"unk";if(td[tdv]!==undefined)td[tdv]++;
+      for(const pm of(b.pm||[])){
+        const p=pm.p||"other";freq[p]=(freq[p]||0)+1;const t=(pm.r||0)*(pm.w||0);ton[p]=(ton[p]||0)+t;
+        if(!mvs[pm.n])mvs[pm.n]={cnt:0,ton:0,pat:p,last:""};mvs[pm.n].cnt++;mvs[pm.n].ton+=t;
+        if(sess.date>mvs[pm.n].last)mvs[pm.n].last=sess.date;
+      }
+    }
+  }}
+  return{freq,ton,td,mvs,cnt:filt.length};
+}
+
+/* ── Block Renderer ────────────────────────── */
+function RBlk({b}){
+  const kc=b.k==="strength"?"kb-strength":b.k==="metcon"?"kb-metcon":"kb-accessory";
+  const kl={strength:"Strength",metcon:"Metcon",accessory:"Accessory"}[b.k]||b.k;
+  return html`<div class="bc">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <span class="kb ${kc}">${kl}</span>
+      <span style="font-weight:600;font-size:12px">${b.mov||b.fmt||""}</span>
+    </div>
+    ${(b.k==="strength"||b.k==="accessory")&&b.sets?.length>0&&html`
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${b.sets.map(s=>html`<span class="set-chip"><span style="color:#7A7168">${s.r}×</span><span style="font-weight:700;color:#B03A2E">${s.w}</span></span>`)}
+      </div>`}
+    ${b.k==="metcon"&&html`<div style="font-size:11px;line-height:1.6">
+      ${b.mv&&html`<div style="color:#7A7168;margin-bottom:3px">${b.mv}</div>`}
+      <div style="display:flex;align-items:center;gap:8px">
+        <span><b>Score:</b> <span class="prv">${b.score}</span></span>
+        <span class="badge ${b.rx?"badge-rx":"badge-sc"}">${b.rx?"Rx":"Scaled"}</span>
+      </div>
+    </div>`}
+  </div>`;
+}
+
+/* ── App ───────────────────────────────────── */
+function App(){
+  const[ready,setReady]=useState(false);
+  const[tab,setTab]=useState("Dashboard");
+  const[sess,setSess]=useState([]);
+  const[prs,setPrs]=useState([]);
+  const[bench,setBench]=useState([]);
+  const[exp,setExp]=useState(null);
+  const[rng,setRng]=useState("4w");
+
+  // Input state
+  const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
+  const[inText,setInText]=useState("");
+  const[parsing,setParsing]=useState(false);
+  const[parseErr,setParseErr]=useState("");
+  const[parseOk,setParseOk]=useState("");
+
+  // Load data
+  useEffect(()=>{
+    (async()=>{
+      await sbInit();
+      try{
+        const[s,p,b]=await Promise.all([
+          sbGet('sessions','order=date.desc'),
+          sbGet('prs','order=category,name'),
+          sbGet('benchmarks','order=name')
+        ]);
+        setSess(s);setPrs(p);setBench(b);
+      }catch(e){console.error('Load error',e);}
+      setReady(true);
+    })();
+  },[]);
+
+  // Derived data
+  const lifts=useMemo(()=>prs.filter(p=>p.category==='lift'),[prs]);
+  const gymPrs=useMemo(()=>prs.filter(p=>p.category==='gymnastics'),[prs]);
+  const cardioPrs=useMemo(()=>prs.filter(p=>p.category==='cardio'),[prs]);
+
+  const ws=weekStart(new Date().toISOString().slice(0,10));
+  const we=useMemo(()=>{const d=new Date(ws+"T12:00:00");d.setDate(d.getDate()+6);return d.toISOString().slice(0,10);},[ws]);
+  const wk=useMemo(()=>agg(sess,ws,we),[sess,ws,we]);
+  const totalTon=useMemo(()=>Object.values(wk.ton).reduce((a,b)=>a+b,0),[wk]);
+  const freqD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:wk.freq[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[wk]);
+  const tonD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:wk.ton[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[wk]);
+  const tdD=useMemo(()=>[{label:"Short (<7m)",val:wk.td.short},{label:"Medium (7-15m)",val:wk.td.med},{label:"Long (15m+)",val:wk.td.long}].filter(x=>x.val>0),[wk]);
+
+  const ra=useMemo(()=>{
+    const today=new Date().toISOString().slice(0,10);let start="2000-01-01";
+    if(rng==="1w")start=ws;
+    else if(rng==="4w"){const d=new Date();d.setDate(d.getDate()-28);start=d.toISOString().slice(0,10);}
+    else if(rng==="3m"){const d=new Date();d.setMonth(d.getMonth()-3);start=d.toISOString().slice(0,10);}
+    else if(rng==="1y"){const d=new Date();d.setFullYear(d.getFullYear()-1);start=d.toISOString().slice(0,10);}
+    return agg(sess,start,today);
+  },[sess,rng,ws]);
+  const raFreqD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:ra.freq[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[ra]);
+  const raTonD=useMemo(()=>PKEYS.map(k=>({label:PAT[k].l,val:ra.ton[k]||0,color:PAT[k].c})).filter(x=>x.val>0),[ra]);
+  const mvTbl=useMemo(()=>Object.entries(ra.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.cnt-a.cnt),[ra]);
+
+  // Submit workout
+  async function submitWorkout(){
+    if(!inText.trim()||parsing)return;
+    setParsing(true);setParseErr("");setParseOk("");
+    try{
+      const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inText,date:inDate})});
+      if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
+      const parsed=await r.json();
+
+      // Save to Supabase (upsert by date)
+      const row={date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||''};
+      await sbPost('sessions',[row]);
+
+      // Refresh sessions
+      const updated=await sbGet('sessions','order=date.desc');
+      setSess(updated);
+      setParseOk("Saved "+fd(inDate));setInText("");setExp(inDate);
+      setTimeout(()=>setParseOk(""),5000);
+    }catch(e){setParseErr(e.message);}
+    finally{setParsing(false);}
+  }
+
+  // Delete session
+  async function delSess(date){
+    if(!confirm("Delete session for "+fd(date)+"?"))return;
+    await sbDelete('sessions','date=eq.'+date);
+    setSess(s=>s.filter(x=>x.date!==date));
+  }
+
+  if(!ready)return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#7A7168"><div class="spin"></div><span style="margin-left:10px">Loading...</span></div>`;
+
+  const tabs=["Dashboard","Workout Log","Volume","PRs"];
+
+  return html`<div>
+    <div class="hdr">
+      <div class="logo">⚡</div>
+      <div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div>
+    </div>
+    <div class="nav">
+      ${tabs.map(t=>html`<button class=${tab===t?"active":""} onClick=${()=>setTab(t)}>${t}</button>`)}
+    </div>
+    <div class="body">
+
+      ${tab==="Dashboard"&&html`<div>
+        <div class="g3" style="margin-bottom:14px">
+          <div class="sc"><div class="sv">${wk.cnt}</div><div class="sl">Sessions This Week</div></div>
+          <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+"k":"0"}</div><div class="sl">Lbs This Week</div></div>
+          <div class="sc"><div class="sv">${sess.length}</div><div class="sl">Total Sessions</div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="ct">Pattern Frequency (This Week)</div><${HBar} data=${freqD}/></div>
+          <div class="card"><div class="ct">Time Domain Split</div><${Donut} data=${tdD}/></div>
+        </div>
+        ${tonD.length>0&&html`<div class="card"><div class="ct">Tonnage by Pattern (This Week)</div><${HBar} data=${tonD}/></div>`}
+        <div class="card"><div class="ct">Recent Sessions</div>
+          ${sess.length===0?html`<div style="color:#B0A89E;font-size:12px;padding:12px 0">No sessions yet. Log your first workout.</div>`:
+          sess.slice(0,5).map(s=>html`<div style="padding:6px 0;border-bottom:1px solid #F0EDE8;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:600;font-size:12px">${fd(s.date)}</span>
+            <div style="display:flex;gap:3px">${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k}">${{strength:"STR",metcon:"MET",accessory:"ACC"}[b.k]||b.k}</span>`)}</div>
+          </div>`)}
+        </div>
+      </div>`}
+
+      ${tab==="Workout Log"&&html`<div>
+        <div class="card">
+          <div class="ct">Log a Workout</div>
+          <div style="display:flex;gap:12px;margin-bottom:10px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:0 0 160px">
+              <label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px;font-weight:600">Date</label>
+              <input type="date" class="inp" value=${inDate} onInput=${e=>setInDate(e.target.value)}/>
+            </div>
+          </div>
+          <textarea class="inp" placeholder="Type your workout however you want...\n\nExamples:\nBack squat 5x3 @ 225\n\n12 min AMRAP\n15 wall balls (20)\n10 TTB\n5 muscle-ups\nScore: 4+12 Rx" value=${inText} onInput=${e=>setInText(e.target.value)}></textarea>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+            <button class="btn" onClick=${submitWorkout} disabled=${parsing||!inText.trim()}>
+              ${parsing?html`<span class="spin" style="width:14px;height:14px;border-width:2px;vertical-align:middle;margin-right:6px"></span> Parsing...`:"Submit Workout"}
+            </button>
+          </div>
+          ${parseErr&&html`<div class="err" style="margin-top:8px">${parseErr}</div>`}
+          ${parseOk&&html`<div class="ok">${parseOk}</div>`}
+        </div>
+
+        <div class="card"><div class="ct">Session History</div>
+          ${sess.length===0?html`<div style="color:#B0A89E;font-size:12px">No sessions yet.</div>`:
+          sess.map(s=>{const o=exp===s.date;return html`<div>
+            <div class="sr ${o?"open":""}" onClick=${()=>setExp(o?null:s.date)}>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><span style="font-weight:700;font-size:12px;color:#2E3F5C">${fd(s.date)}</span><span style="color:#7A7168;font-size:10px;margin-left:8px">${(s.blocks||[]).length}b</span></div>
+                <div style="display:flex;gap:3px;align-items:center">
+                  ${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k}">${{strength:"STR",metcon:"MET",accessory:"ACC"}[b.k]||b.k}</span>`)}
+                  <span style="margin-left:6px;color:#7A7168;font-size:12px">${o?"▲":"▼"}</span>
+                </div>
+              </div>
+            </div>
+            ${o&&html`<div class="sd">
+              ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
+              ${s.raw_text&&html`<div style="margin:6px 0 10px;padding:8px;background:#FBF1E3;border-left:3px solid #C07D3A;border-radius:4px;font-size:10px;color:#7A7168;white-space:pre-wrap">${s.raw_text}</div>`}
+              <div style="display:flex;justify-content:flex-end;padding-bottom:4px">
+                <button style="background:transparent;color:#B03A2E;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>delSess(s.date)}>Delete</button>
+              </div>
+            </div>`}
+          </div>`;})}
+        </div>
+      </div>`}
+
+      ${tab==="Volume"&&html`<div>
+        <div style="display:flex;gap:3px;margin-bottom:14px">
+          ${[["1w","Week"],["4w","4 Wk"],["3m","3 Mo"],["1y","Year"],["all","All"]].map(([k,l])=>
+            html`<button class="rn ${rng===k?"active":""}" onClick=${()=>setRng(k)}>${l}</button>`)}
+        </div>
+        <div class="g3" style="margin-bottom:14px">
+          <div class="sc"><div class="sv">${ra.cnt}</div><div class="sl">Sessions</div></div>
+          <div class="sc"><div class="sv">${(()=>{const t=Object.values(ra.ton).reduce((a,b)=>a+b,0);return t>0?(t/1000).toFixed(1)+"k":"0";})()}</div><div class="sl">Tonnage (lbs)</div></div>
+          <div class="sc"><div class="sv">${Object.keys(ra.mvs).length}</div><div class="sl">Unique Moves</div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${raFreqD}/></div>
+          <div class="card"><div class="ct">Tonnage by Pattern</div><${HBar} data=${raTonD}/></div>
+        </div>
+        <div class="card"><div class="ct">Movement Frequency</div>
+          <table><thead><tr><th>Movement</th><th>Pattern</th><th style="text-align:right">Count</th><th style="text-align:right">Tonnage</th><th>Last</th></tr></thead>
+          <tbody>${mvTbl.slice(0,30).map(m=>html`<tr>
+            <td>${m.n}</td>
+            <td><span style="font-size:10px;font-weight:600;color:${PAT[m.pat]?.c||"#7A7168"}">${PAT[m.pat]?.l||m.pat}</span></td>
+            <td style="text-align:right;font-weight:600">${m.cnt}</td>
+            <td style="text-align:right;color:${m.ton>0?"#B03A2E":"#B0A89E"}">${m.ton>0?m.ton.toLocaleString():"-"}</td>
+            <td class="mut">${fd(m.last)}</td>
+          </tr>`)}</tbody></table>
+        </div>
+      </div>`}
+
+      ${tab==="PRs"&&html`<div>
+        <div class="card"><div class="ct">Lifting PRs</div>
+          <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th>Trend</th></tr></thead>
+          <tbody>${lifts.map(l=>html`<tr>
+            <td>${l.name}</td><td class="prv">${l.pr_value} lbs</td><td class="mut">${fd(l.date)}</td><td><${Spark} hist=${l.history}/></td>
+          </tr>`)}</tbody></table>
+        </div>
+        <div class="card"><div class="ct">Gymnastics PRs</div>
+          <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th>Trend</th></tr></thead>
+          <tbody>${gymPrs.map(l=>html`<tr>
+            <td>${l.name}</td><td class="prv">${l.pr_value} reps</td><td class="mut">${fd(l.date)}</td><td><${Spark} hist=${l.history}/></td>
+          </tr>`)}</tbody></table>
+        </div>
+        <div class="card"><div class="ct">Cardio PRs</div>
+          <table><thead><tr><th>Event</th><th>PR</th><th>Date</th><th>Trend</th></tr></thead>
+          <tbody>${cardioPrs.map(c=>html`<tr>
+            <td>${c.name}</td><td class="prv">${c.pr_display||c.pr_value}</td><td class="mut">${fd(c.date)}</td><td><${Spark} hist=${c.history} isTime=${true}/></td>
+          </tr>`)}</tbody></table>
+        </div>
+        <div class="card"><div class="ct">Benchmark WODs</div>
+          ${bench.map(b=>html`<div style="margin-bottom:14px">
+            <div style="font-weight:700;font-size:12px;color:#2E3F5C;margin-bottom:6px">${b.name}${b.notes&&html`<span style="color:#7A7168;font-weight:400;font-size:10px;margin-left:6px">${b.notes}</span>`}</div>
+            <table><thead><tr><th>Date</th><th>Score</th></tr></thead>
+            <tbody>${(b.scores||[]).map(s=>html`<tr><td class="mut">${fd(s.d)}</td><td class="prv">${s.v}</td></tr>`)}</tbody></table>
+          </div>`)}
+        </div>
+      </div>`}
+
+    </div>
+  </div>`;
+}
+
+render(html`<${App}/>`,document.getElementById('app'));
+</script>
+</body>
+</html>
