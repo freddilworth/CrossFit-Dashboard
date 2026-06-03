@@ -117,11 +117,13 @@ function cls(nm){
   // Jerk (after C&J)
   if(/jerk/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   // Hinge
+  if(/sandbag\s*(clean|load|carry)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/deadlift|rdl|romanian|good\s*morn|hip\s*ext/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/kb\s*swing|kettlebell/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/sdhp|sumo/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   // Push
   if(/press/.test(n)&&!/bench/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
+  if(/wall\s*walk/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
   if(/hspu|handstand/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
   if(/s2oh|shoulder\s*to/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   if(/\bdip/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
