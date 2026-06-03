@@ -128,42 +128,48 @@ function lastRestDay(sessions){
 /* ── Movement classifier ────────────────────── */
 function classifyMovement(name){
   if(!name)return null;
-  // Monostructural — pat is null
-  if(/cal\s+row|cal\s+ski|cal\s+bike/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
-  if(/\b(assault\s+bike|echo\s+bike|air\s+bike)\b/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
-  if(/\b(rower|ski\s+erg)\b/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
-  if(/\b(row|ski|bike)\b/i.test(name)&&!/barbell|db\s|dumbbell|bent|ring/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
-  if(/\b(run|sprint|double\s+under|double-under|\bdu\b|\bdus\b|single\s+under|jump\s+rope)\b/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
-  if(/\b(box\s+jump|burpee|burpees)/i.test(name))return{pat:null,sub:null,mod:"monostructural"};
+  const n=name.toLowerCase();
+  // Monostructural — pat is null. Check specific cal patterns first.
+  if(/cal row|cal ski|cal bike/.test(n))return{pat:null,sub:null,mod:"monostructural"};
+  if(/assault bike|echo bike|air bike|rower|ski erg/.test(n))return{pat:null,sub:null,mod:"monostructural"};
+  // "double under" as substring matches "double unders", "double under" — no trailing \b
+  if(/double under|double-under/.test(n))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\bdu\b|\bdus\b/.test(n))return{pat:null,sub:null,mod:"monostructural"};
+  if(/\brun\b|\bsprint\b|single under|jump rope/.test(n))return{pat:null,sub:null,mod:"monostructural"};
+  if(/box jump|burpee/.test(n))return{pat:null,sub:null,mod:"monostructural"};
+  // Generic row/ski/bike — exclude loaded pulling movements
+  if(/\brow\b|\bski\b|\bbike\b/.test(n)&&!/barbell|ring row|bent over|^db |dumbbell/.test(n))return{pat:null,sub:null,mod:"monostructural"};
   // Core gymnastics
-  if(/\bttb\b|toes.to.bar|ghd\s+sit.?up|\bsit.?up\b|ab\s+mat|\bl.sit\b|plank|\bv.up\b|\bk2e\b|knees.to.elbow|hollow/i.test(name))return{pat:"core",sub:null,mod:"gymnastics"};
+  if(n==="ttb"||/\bttb\b/.test(n))return{pat:"core",sub:null,mod:"gymnastics"};
+  if(/toes.to.bar|ghd sit|sit.up|ab mat|l.sit|plank|\bv.up\b|\bk2e\b|knees.to.elbow|hollow/.test(n))return{pat:"core",sub:null,mod:"gymnastics"};
   // Pull vertical gymnastics
-  if(/pull.?up|c2b|chest.to.bar|bar\s+muscle.?up|ring\s+muscle.?up|\bmuscle.?up\b|rope\s+climb|butterfly\s+pull|kipping/i.test(name))return{pat:"pull",sub:"vertical",mod:"gymnastics"};
+  if(/pull.up|c2b|chest.to.bar|bar muscle|ring muscle|muscle.up|rope climb|butterfly pull|kipping/.test(n))return{pat:"pull",sub:"vertical",mod:"gymnastics"};
   // Pull horizontal gymnastics
-  if(/ring\s+row/i.test(name))return{pat:"pull",sub:"horizontal",mod:"gymnastics"};
+  if(n.includes("ring row"))return{pat:"pull",sub:"horizontal",mod:"gymnastics"};
   // Pull horizontal weightlifting
-  if(/barbell\s+row|db\s+row|dumbbell\s+row|pendlay\s+row|bent\s+over\s+row/i.test(name))return{pat:"pull",sub:"horizontal",mod:"weightlifting"};
+  if(/barbell row|db row|dumbbell row|pendlay row|bent over row/.test(n))return{pat:"pull",sub:"horizontal",mod:"weightlifting"};
   // Push vertical gymnastics
-  if(/\bhspu\b|handstand\s+push.?up/i.test(name))return{pat:"push",sub:"vertical",mod:"gymnastics"};
+  if(/\bhspu\b|handstand push/.test(n))return{pat:"push",sub:"vertical",mod:"gymnastics"};
   // Push horizontal gymnastics
-  if(/\bpush.?up\b|ring\s+push.?up|\bdip\b/i.test(name))return{pat:"push",sub:"horizontal",mod:"gymnastics"};
+  if(/push.up|ring push|\bdip\b/.test(n))return{pat:"push",sub:"horizontal",mod:"gymnastics"};
   // Push vertical weightlifting
-  if(/strict\s+press|push\s+press|push\s+jerk|split\s+jerk|overhead\s+press|shoulder\s+press/i.test(name))return{pat:"push",sub:"vertical",mod:"weightlifting"};
+  if(/strict press|push press|push jerk|split jerk|overhead press|shoulder press/.test(n))return{pat:"push",sub:"vertical",mod:"weightlifting"};
   // Push horizontal weightlifting
-  if(/bench\s+press|db\s+bench|floor\s+press/i.test(name))return{pat:"push",sub:"horizontal",mod:"weightlifting"};
-  // Hinge weightlifting — check before generic squat patterns
-  if(/c&j|\bclean\s*&\s*jerk\b|clean\s+and\s+jerk/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
-  if(/power\s+clean|power\s+snatch/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
-  if(/\bdeadlift\b|\brdl\b|romanian/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
-  if(/kb\s+swing|kettlebell\s+swing|good\s+morning/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
-  if(/db\s+hang\s+snatch|sa\s+db.*snatch|db\s+snatch|db\s+clean|dumbbell\s+snatch|dumbbell\s+clean/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
-  if(/hang\s+snatch|hang\s+clean/i.test(name)&&!/squat/i.test(name))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/bench press|db bench|floor press/.test(n))return{pat:"push",sub:"horizontal",mod:"weightlifting"};
+  // Hinge — check before generic clean/squat patterns
+  if(n.includes("c&j")||/clean.*jerk|clean and jerk/.test(n))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/power clean|power snatch/.test(n))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/deadlift|\brdl\b|romanian/.test(n))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/kb swing|kettlebell swing|good morning/.test(n))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/db hang snatch|db snatch|db clean|dumbbell snatch|dumbbell clean/.test(n))return{pat:"hinge",sub:null,mod:"weightlifting"};
+  if(/hang snatch|hang clean/.test(n)&&!n.includes("squat"))return{pat:"hinge",sub:null,mod:"weightlifting"};
   // Squat olympic variants
-  if(/squat\s+clean|squat\s+snatch|hang\s+squat/i.test(name))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
+  if(/squat clean|squat snatch|hang squat/.test(n))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
   // Squat single-leg
-  if(/\blunge\b|pistol|step.?up|bulgarian|single.?leg/i.test(name))return{pat:"squat",sub:"single-leg",mod:"weightlifting"};
+  if(/\blunge\b|pistol|\bstep.up\b|bulgarian|single.leg/.test(n))return{pat:"squat",sub:"single-leg",mod:"weightlifting"};
   // Squat weightlifting
-  if(/back\s+squat|front\s+squat|overhead\s+squat|\bohs\b|thruster|wall\s+ball|air\s+squat|goblet\s+squat|sa\s+db\s+thruster|db\s+thruster|\bsquat\b/i.test(name))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
+  if(/back squat|front squat|overhead squat|\bohs\b|thruster|wall ball|air squat|goblet squat/.test(n))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
+  if(/sa db thruster|db thruster|\bsquat\b/.test(n))return{pat:"squat",sub:"traditional",mod:"weightlifting"};
   return null;
 }
 
