@@ -92,7 +92,7 @@ function cls(nm){
   if(/\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:null,mod:'monostructural'};
   if(/double\s*under/.test(n)||n==='du'||n==='dus')return{pat:null,sub:null,mod:'monostructural'};
   if(/box\s*jump/.test(n))return{pat:null,sub:null,mod:'monostructural'};
-  if(/burpee/.test(n))return{pat:null,sub:null,mod:'monostructural'};
+  if(/burpee/.test(n))return{pat:'push',sub:'horizontal',mod:'monostructural'};
   if(/\b(ski|bike|assault|echo)\b/.test(n))return{pat:null,sub:null,mod:'monostructural'};
   if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:null,mod:'monostructural'};
   if(/\brow\b/.test(n)&&!/(barbell|db|bent|pendlay|ring)/.test(n))return{pat:null,sub:null,mod:'monostructural'};
@@ -110,7 +110,6 @@ function cls(nm){
   if(/\bclean\b/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/\bsnatch\b/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   // Squat
-  if(/thruster/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/wall\s*ball/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/squat|ohs\b|overhead\s*sq|goblet/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/air\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'gymnastics'};
@@ -134,6 +133,16 @@ function cls(nm){
   if(/ring\s*row/.test(n))return{pat:'pull',sub:'horizontal',mod:'gymnastics'};
   if(/(barbell|db|pendlay|bent)\s*row/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
   return{pat:null,sub:null,mod:null};
+}
+
+// ══════ MULTI-PATTERN CLASSIFIER ══════
+function clsAll(nm){
+  const n=(nm||'').toLowerCase().trim();
+  if(/thruster/.test(n))return[
+    {pat:'squat',sub:'traditional',mod:'weightlifting'},
+    {pat:'push',sub:'vertical',mod:'weightlifting'}
+  ];
+  return[cls(nm)];
 }
 
 // ══════ METADATA ══════
@@ -221,16 +230,16 @@ function agg(sessions,start,end){
   for(const sess of filt){
     for(const b of(sess.blocks||[])){
       if(b.k==='strength'||b.k==='accessory'){
-        const c=cls(b.mov);
+        const cs=clsAll(b.mov);
         const reps=(b.sets||[]).reduce((s,x)=>s+(x.r||0),0);
         const ton=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);
-        add(b.mov,c.pat,c.sub,c.mod,reps,ton,sess.date);
+        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,c.mod,reps,ton,sess.date));
       }
       if(b.k==='metcon'){
         const tdv=b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
-          const c=cls(pm.n);
-          add(pm.n,c.pat,c.sub,c.mod,pm.r||0,(pm.r||0)*(pm.w||0),sess.date);
+          const cs=clsAll(pm.n);
+          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,c.mod,pm.r||0,(pm.r||0)*(pm.w||0),sess.date));
         }
       }
     }
@@ -362,8 +371,10 @@ function App(){
     const sqHi=hiF?((sqF/hiF).toFixed(1)+':1'):(sqF?sqF+':0':'0:0');
     const vpush=(dashAgg.sF.push_vertical||0);const hpush=(dashAgg.sF.push_horizontal||0);
     const vpull=(dashAgg.sF.pull_vertical||0);const hpull=(dashAgg.sF.pull_horizontal||0);
+    const trad=(dashAgg.sF.squat_traditional||0);const sleg=(dashAgg.sF.squat_single_leg||0);
     const modD=MK.map(k=>({label:MODS[k].l,val:dashAgg.mF[k]||0,color:MODS[k].c}));
     const tdD=[{label:'Short (<7m)',val:dashAgg.td.short,color:'#C0392B'},{label:'Medium (7-15m)',val:dashAgg.td.med,color:'#2E86C1'},{label:'Long (15m+)',val:dashAgg.td.long,color:'#2E3F5C'}];
+    const patD=PK.map(k=>({label:PATS[k].l,val:dashAgg.pF[k]||0,color:PATS[k].c}));
 
     return html`<div>
       <div class="g4" style="margin-bottom:14px">
@@ -386,15 +397,19 @@ function App(){
         </div>
       </div>
       <div class="g2">
+        <div class="card"><div class="ct">Time Domain Balance (This Month)</div><${Donut} data=${tdD}/></div>
+        <div class="card"><div class="ct">Modality Balance (This Month)</div><${Donut} data=${modD}/></div>
+      </div>
+      <div class="g2">
+        <div class="card"><div class="ct">Pattern Balance (This Month)</div><${Donut} data=${patD}/></div>
         <div class="card"><div class="ct">Sub-Category Balance (This Month)</div>
           <div style="font-size:12px;line-height:2">
             <div><b>Push:</b> Vertical ${vpush} / Horizontal ${hpush}</div>
             <div><b>Pull:</b> Vertical ${vpull} / Horizontal ${hpull}</div>
+            <div><b>Squat:</b> Traditional ${trad} / Single-Leg ${sleg}</div>
           </div>
         </div>
-        <div class="card"><div class="ct">Modality Balance (This Month)</div><${Donut} data=${modD}/></div>
       </div>
-      <div class="card"><div class="ct">Time Domain Balance (This Month)</div><${Donut} data=${tdD}/></div>
     </div>`;
   }
 
