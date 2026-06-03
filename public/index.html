@@ -317,7 +317,10 @@ function App(){
   const[inText,setInText]=useState('');
   const[inHappy,setInHappy]=useState('');
   const[inFun,setInFun]=useState('');
-  const[editMood,setEditMood]=useState(null); // date string of session being mood-edited
+  const[editSess,setEditSess]=useState(null);    // date of session open for editing
+  const[editRawText,setEditRawText]=useState('');
+  const[editSaving,setEditSaving]=useState(false);
+  const[editErr,setEditErr]=useState('');
   const[parsing,setParsing]=useState(false);
   const[pErr,setPErr]=useState('');
   const[pOk,setPOk]=useState('');
@@ -503,11 +506,24 @@ function App(){
       </div>
       <div class="card"><div class="ct">Session History</div>
         ${sess.length===0?html`<div class="mut" style="padding:12px 0">No sessions yet.</div>`:
-        sess.map(s=>{const o=exp===s.date;const em=editMood===s.date;
+        sess.map(s=>{const o=exp===s.date;const ed=editSess===s.date;
           const hLabel={happy:'Happy',neutral:'Neutral',unhappy:'Not Happy'};
           const fLabel={fun:'Had Fun',neutral:'Neutral',notfun:'Not Fun'};
+          function openEdit(){setEditSess(s.date);setEditRawText(s.raw_text||'');setEditErr('');}
+          function closeEdit(){setEditSess(null);setEditRawText('');setEditErr('');}
+          async function saveWorkout(){
+            if(!editRawText.trim()||editSaving)return;
+            setEditSaving(true);setEditErr('');
+            try{
+              const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:editRawText,date:s.date})});
+              if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
+              const parsed=await r.json();
+              await fetch(SB_URL+'/rest/v1/sessions?id=eq.'+s.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({blocks:parsed.blocks||[],raw_text:editRawText,notes:parsed.notes||''})});
+              const updated=await sbGet('sessions','order=date.desc');setSess(updated);closeEdit();
+            }catch(e){setEditErr(e.message);}finally{setEditSaving(false);}
+          }
           return html`<div>
-          <div class="sr ${o?'open':''}" onClick=${()=>{setExp(o?null:s.date);if(o)setEditMood(null);}}>
+          <div class="sr ${o?'open':''}" onClick=${()=>{setExp(o?null:s.date);if(o)closeEdit();}}>
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div style="display:flex;align-items:center;gap:8px">
                 <span style="font-weight:700;font-size:12px;color:#2E3F5C">${fd(s.date)}</span>
@@ -521,9 +537,13 @@ function App(){
             </div>
           </div>
           ${o&&html`<div class="sd">
-            ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
-            ${s.raw_text&&html`<div class="note-block">${s.raw_text}</div>`}
-            ${em?html`<div style="padding:10px 0 6px;border-top:1px solid #DDD7CE;margin-top:8px">
+            ${!ed&&(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
+            ${!ed&&s.raw_text&&html`<div class="note-block">${s.raw_text}</div>`}
+            ${ed&&html`<div style="padding:10px 0 6px;border-top:1px solid #DDD7CE;margin-top:4px">
+              <div style="margin-bottom:10px">
+                <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">Workout</div>
+                <textarea class="inp" style="min-height:80px" value=${editRawText} onInput=${e=>setEditRawText(e.target.value)}></textarea>
+              </div>
               <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:10px">
                 <div>
                   <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">Performance Satisfaction</div>
@@ -550,15 +570,21 @@ function App(){
                   </div>
                 </div>
               </div>
-              <button class="rn act" style="font-size:10px" onClick=${()=>setEditMood(null)}>Done</button>
-            </div>`:''}
+              ${editErr&&html`<div class="err" style="margin-bottom:8px">${editErr}</div>`}
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn" onClick=${saveWorkout} disabled=${editSaving||!editRawText.trim()}>
+                  ${editSaving?html`<span class="spin" style="width:12px;height:12px;border-width:2px;vertical-align:middle;margin-right:4px"></span>Saving...`:'Save Workout'}
+                </button>
+                <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${closeEdit}>Cancel</button>
+              </div>
+            </div>`}
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 4px">
-              <button style="background:transparent;color:#2E3F5C;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setEditMood(em?null:s.date)}>${em?'Cancel':'Edit Ratings'}</button>
+              ${!ed&&html`<button style="background:transparent;color:#2E3F5C;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${openEdit}>Edit</button>`}
+              ${ed&&html`<div></div>`}
               <button style="background:transparent;color:#B03A2E;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{if(confirm('Delete?')){sbDel('sessions','date=eq.'+s.date);setSess(p=>p.filter(x=>x.date!==s.date));}}}>Delete</button>
             </div>
           </div>`}
         </div>`;})}
-    </div>`;
   }
 
   // ══════ VOLUME TAB ══════
