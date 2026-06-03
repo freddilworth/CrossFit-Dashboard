@@ -219,6 +219,7 @@ function Delta({cur,prev}){
 function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
   const pF={},pT={},pR={},mF={},mT={},mR={},sF={},sT={},td={short:0,med:0,long:0},mvs={};
+  const mood={happy:0,neutralH:0,unhappy:0,hTotal:0,fun:0,neutralF:0,notfun:0,fTotal:0};
   function add(nm,pat,sub,mod,reps,ton,date){
     if(pat){pF[pat]=(pF[pat]||0)+1;pT[pat]=(pT[pat]||0)+ton;pR[pat]=(pR[pat]||0)+reps;
       if(sub){const sk=pat+'_'+sub;sF[sk]=(sF[sk]||0)+1;sT[sk]=(sT[sk]||0)+ton;}}
@@ -248,9 +249,13 @@ function agg(sessions,start,end){
       }
     }
   }
+  for(const s of filt){
+    if(s.happiness){mood.hTotal++;if(s.happiness==='happy')mood.happy++;else if(s.happiness==='unhappy')mood.unhappy++;else mood.neutralH++;}
+    if(s.fun){mood.fTotal++;if(s.fun==='fun')mood.fun++;else if(s.fun==='notfun')mood.notfun++;else mood.neutralF++;}
+  }
   const mvsFinal={};
   for(const[nm,d]of Object.entries(mvs))mvsFinal[nm]={...d,freq:d.freq.size};
-  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length};
+  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood};
 }
 
 // ══════ CONSECUTIVE DAYS ══════
@@ -310,10 +315,14 @@ function App(){
   const[rng,setRng]=useState('month');
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState('');
+  const[inHappy,setInHappy]=useState('');
+  const[inFun,setInFun]=useState('');
   const[parsing,setParsing]=useState(false);
   const[pErr,setPErr]=useState('');
   const[pOk,setPOk]=useState('');
   const[tdRng,setTdRng]=useState('month');
+  const[happyRng,setHappyRng]=useState('month');
+  const[funRng,setFunRng]=useState('month');
   const[modRng,setModRng]=useState('month');
   const[patRng,setPatRng]=useState('month');
   const[subRng,setSubRng]=useState('month');
@@ -359,9 +368,9 @@ function App(){
       const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inText,date:inDate})});
       if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
       const parsed=await r.json();
-      await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||''}]);
+      await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}]);
       const updated=await sbGet('sessions','order=date.desc');
-      setSess(updated);setPOk('Saved '+fd(inDate));setInText('');setExp(inDate);
+      setSess(updated);setPOk('Saved '+fd(inDate));setInText('');setInHappy('');setInFun('');setExp(inDate);
       setTimeout(()=>setPOk(''),5000);
     }catch(e){setPErr(e.message);}finally{setParsing(false);}
   }
@@ -381,6 +390,8 @@ function App(){
   }
 
   // Dashboard aggregations driven by App-level toggle state
+  const happyAgg=useMemo(()=>agg(sess,calPeriod(happyRng,0).start,calPeriod(happyRng,0).end),[sess,happyRng]);
+  const funAgg=useMemo(()=>agg(sess,calPeriod(funRng,0).start,calPeriod(funRng,0).end),[sess,funRng]);
   const tdAgg=useMemo(()=>agg(sess,calPeriod(tdRng,0).start,calPeriod(tdRng,0).end),[sess,tdRng]);
   const modAgg=useMemo(()=>agg(sess,calPeriod(modRng,0).start,calPeriod(modRng,0).end),[sess,modRng]);
   const patAgg=useMemo(()=>agg(sess,calPeriod(patRng,0).start,calPeriod(patRng,0).end),[sess,patRng]);
@@ -389,10 +400,9 @@ function App(){
   // ══════ DASHBOARD TAB ══════
   function DashTab(){
     const sc=streak<5?'streak-g':streak<7?'streak-y':'streak-r';
-    const pushF=(dashAgg.pF.push||0);const pullF=(dashAgg.pF.pull||0);
-    const sqF=(dashAgg.pF.squat||0);const hiF=(dashAgg.pF.hinge||0);
-    const pushPull=pullF?((pushF/pullF).toFixed(1)+':1'):(pushF?pushF+':0':'0:0');
-    const sqHi=hiF?((sqF/hiF).toFixed(1)+':1'):(sqF?sqF+':0':'0:0');
+    const hm=happyAgg.mood;const fm=funAgg.mood;
+    const happyRate=hm.hTotal?Math.round(hm.happy/hm.hTotal*100):null;
+    const funRate=fm.fTotal?Math.round(fm.fun/fm.fTotal*100):null;
 
     const tdD=[{label:'Short (<7m)',val:tdAgg.td.short,color:'#C0392B'},{label:'Medium (7-15m)',val:tdAgg.td.med,color:'#2E86C1'},{label:'Long (15m+)',val:tdAgg.td.long,color:'#2E3F5C'}];
     const modD=MK.map(k=>({label:MODS[k].l,val:modAgg.mF[k]||0,color:MODS[k].c}));
@@ -412,13 +422,23 @@ function App(){
           <div style="font-size:22px;font-weight:700;color:#2E3F5C">${restDaysAgo}d ago</div>
           <div class="mut">${fd(restDay)}</div>
         </div>
-        <div class="ratio-card">
-          <div class="ratio-val" style="color:${pushF>pullF*1.5?'#B03A2E':'#2E3F5C'}">${pushPull}</div>
-          <div class="ratio-lbl">Push : Pull</div>
+        <div class="ratio-card" style="padding:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase">Performance Satisfaction</div>
+          </div>
+          <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${happyRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setHappyRng(k)}>${l}</button>`)}</div>
+          <div class="ratio-val" style="color:${happyRate===null?'#B0A89E':happyRate>=60?'#2D6A4F':happyRate>=40?'#C07D3A':'#B03A2E'}">${happyRate===null?'—':happyRate+'%'}</div>
+          <div class="ratio-lbl">Satisfied</div>
+          ${hm.hTotal>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:4px">${hm.happy}✓ ${hm.neutralH}— ${hm.unhappy}✗ of ${hm.hTotal}</div>`}
         </div>
-        <div class="ratio-card">
-          <div class="ratio-val" style="color:${sqF>hiF*2?'#B03A2E':'#2E3F5C'}">${sqHi}</div>
-          <div class="ratio-lbl">Squat : Hinge</div>
+        <div class="ratio-card" style="padding:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase">Enjoyment</div>
+          </div>
+          <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${funRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setFunRng(k)}>${l}</button>`)}</div>
+          <div class="ratio-val" style="color:${funRate===null?'#B0A89E':funRate>=60?'#2D6A4F':funRate>=40?'#C07D3A':'#B03A2E'}">${funRate===null?'—':funRate+'%'}</div>
+          <div class="ratio-lbl">Had Fun</div>
+          ${fm.fTotal>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:4px">${fm.fun}✓ ${fm.neutralF}— ${fm.notfun}✗ of ${fm.fTotal}</div>`}
         </div>
       </div>
       <div class="g2">
@@ -456,6 +476,22 @@ function App(){
         <div style="display:flex;gap:12px;margin-bottom:10px;align-items:flex-end;flex-wrap:wrap">
           <div style="flex:0 0 160px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px;font-weight:600">Date</label>
             <input type="date" class="inp" value=${inDate} onInput=${e=>setInDate(e.target.value)}/></div>
+        </div>
+        <div style="display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">How do you feel about your performance today?</div>
+            <div style="display:flex;gap:4px">
+              ${[['happy','😊 Happy'],['neutral','😐 Neutral'],['unhappy','😞 Not Happy']].map(([v,l])=>
+                html`<button class="rn ${inHappy===v?'act':''}" onClick=${()=>setInHappy(inHappy===v?'':v)}>${l}</button>`)}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:5px">Did you have fun at the gym today?</div>
+            <div style="display:flex;gap:4px">
+              ${[['fun','😄 Had Fun'],['neutral','😐 Neutral'],['notfun','😕 Not Fun']].map(([v,l])=>
+                html`<button class="rn ${inFun===v?'act':''}" onClick=${()=>setInFun(inFun===v?'':v)}>${l}</button>`)}
+            </div>
+          </div>
         </div>
         <textarea class="inp" placeholder="Type your workout however you want..." value=${inText} onInput=${e=>setInText(e.target.value)}></textarea>
         <div style="margin-top:10px"><button class="btn" onClick=${submit} disabled=${parsing||!inText.trim()}>

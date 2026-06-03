@@ -8,8 +8,13 @@ CREATE TABLE IF NOT EXISTS sessions (
   blocks jsonb NOT NULL DEFAULT '[]',
   raw_text text DEFAULT '',
   notes text DEFAULT '',
+  happiness text DEFAULT '',
+  fun text DEFAULT '',
   created_at timestamptz DEFAULT now()
 );
+-- Migration (run if table already exists):
+-- ALTER TABLE sessions ADD COLUMN IF NOT EXISTS happiness text DEFAULT '';
+-- ALTER TABLE sessions ADD COLUMN IF NOT EXISTS fun text DEFAULT '';
 CREATE UNIQUE INDEX IF NOT EXISTS sessions_date_idx ON sessions(date);
 
 -- PRs table
