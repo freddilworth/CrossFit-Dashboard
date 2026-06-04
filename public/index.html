@@ -130,6 +130,7 @@ function cls(nm){
   if(/over\s*shoulder/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   // Squat
   if(/wall\s*ball/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
+  if(/goblet\s*lunge/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
   if(/squat|ohs\b|overhead\s*sq|goblet/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/air\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'gymnastics'};
   if(/\bbsu\b|box\s*step.?up/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
@@ -248,6 +249,19 @@ function normMov(nm){
   if(/^hrpu$|hand\s*release\s*push/.test(n))return'Hand Release Push-Up';
   // S2OH → Push Jerk
   if(/^s2oh$|shoulder\s*to\s*overhead/.test(n))return'Push Jerk';
+  // Jerk variants
+  if(/pause\s*split\s*jerk|split\s*jerk/.test(n))return'Split Jerk';
+  // Squat variants — specific first
+  if(/pause\s*front\s*squat/.test(n))return'Front Squat';
+  if(/\bback\s*squat/.test(n))return'Back Squat';
+  if(/\bfront\s*squat/.test(n))return'Front Squat';
+  // Snatch variants
+  if(/lo\s*hang\s*squat\s*snatch|snatch\s*singles?|squat\s*snatch/.test(n))return'Squat Snatch';
+  // Clean & Jerk variants
+  if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return'Clean & Jerk';
+  // Lunge variants
+  if(/walking\s*lunge/.test(n))return'Walking Lunge';
+  if(/goblet\s*lunge/.test(n))return'Goblet Lunge';
   // Hinge / deadlift variants
   if(/^hps$|hang\s*power\s*snatch/.test(n))return'Hang Power Snatch';
   if(/dbl\s*(db|kb)\s*(dead\s*lift|dl|deadlift)|double\s*(db|kb)\s*dead/.test(n))return'DB Deadlift';
