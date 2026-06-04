@@ -95,6 +95,8 @@ function cls(nm){
   if(/^cal\s|cal\s*row|cal\s*ski/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
   if(/\b(ski|bike|assault|echo)\b/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
   if(/\brow\b/.test(n)&&!/(barbell|db|bent|pendlay|ring)/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
+  // Burpees — gymnastics BEFORE bounding checks so "Burpee BSO" etc. don't misclassify
+  if(/burpee/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
   // Monostructural — bounding
   if(/shuttle\s*run|\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/double\s*under/.test(n)||n==='du'||n==='dus')return{pat:null,sub:'bounding',mod:'monostructural'};
@@ -103,8 +105,6 @@ function cls(nm){
   if(/\bbso\b|box\s*step\s*over/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/broad\s*jump|lateral\s*bound/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
-  // Burpees — gymnastics (must come before general push-up/horizontal checks)
-  if(/burpee/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
   // Core
   if(n==='ttb'||/toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/ghd|sit.?up|l-sit|plank|v-up|ab\s*mat|k2e|knee.*elbow|hollow/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
@@ -239,7 +239,8 @@ function normMov(nm){
   if(/box\s*jump/.test(n)&&!/over/.test(n))return'Box Jump';
   if(/box\s*jump\s*over|box\s*jumps?\s*over/.test(n))return'Box Jump Over';
   // Burpee variants — specific compounds first, then collapse rest to Burpee
-  if(/burpee\s*(over\s*(rower|kb|bar)|to\s*target|bso|bju)|lateral\s*burpee|line\s*facing\s*burpee/.test(n))return'Burpee';
+  if(/burpee\s*bso|burpee\s*box\s*step\s*over/.test(n))return'Burpee Box Step Over';
+  if(/burpee\s*(over\s*(rower|kb|bar)|to\s*target)|lateral\s*burpee|line\s*facing\s*burpee/.test(n))return'Burpee';
   if(/^burpees?$/.test(n))return'Burpee';
   // Push / gymnastics
   if(/\bhspu\b|handstand\s*push.?up/.test(n))return'HSPU';
@@ -361,7 +362,7 @@ function agg(sessions,start,end){
       if(!mvs[key])mvs[key]={freq:new Set(),reps:0,ton:0,pat,sub,mod,last:''};
       mvs[key].freq.add(date);mvs[key].reps+=reps;mvs[key].ton+=ton;
       if(date>mvs[key].last)mvs[key].last=date;
-      if(pat&&!mvs[key].pat)mvs[key].pat=pat;
+      if(pat&&!mvs[key].pat){mvs[key].pat=pat;mvs[key].sub=sub;}
       if(mod&&!mvs[key].mod)mvs[key].mod=mod;
     }
   }
