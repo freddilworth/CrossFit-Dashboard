@@ -414,15 +414,11 @@ function App(){
   const volAgg=useMemo(()=>agg(sess,volP.start,volP.end),[sess,volP]);
   const volPrevAgg=useMemo(()=>agg(sess,volPrev.start,volPrev.end),[sess,volPrev]);
 
-  // Debounced rng for sparklines — main charts update immediately, sparklines follow 150ms later
-  const[rngSpark,setRngSpark]=useState('month');
-  useEffect(()=>{const t=setTimeout(()=>setRngSpark(rng),150);return()=>clearTimeout(t);},[rng]);
-
-  // Sparkline periods
-  const spCount=rngSpark==='week'?8:rngSpark==='month'?6:rngSpark==='quarter'?4:3;
+  // Sparkline periods — capped at 4 to keep computation light
+  const spCount=4;
   const spPeriods=useMemo(()=>{
-    const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rngSpark,i).start,calPeriod(rngSpark,i).end));return arr;
-  },[sess,rngSpark,spCount]);
+    const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rng,i).start,calPeriod(rng,i).end));return arr;
+  },[sess,rng]);
 
   const mvTbl=useMemo(()=>Object.entries(volAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.reps-a.reps),[volAgg]);
 
