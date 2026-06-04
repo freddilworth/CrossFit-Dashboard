@@ -87,15 +87,22 @@ async function sbDel(t,m){await fetch(SB_URL+'/rest/v1/'+t+'?'+m,{method:'DELETE
 function cls(nm){
   const n=(nm||'').toLowerCase().trim();
   if(!n)return{pat:null,sub:null,mod:null};
-  // Monostructural first
-  if(/^cal\s|cal\s*row|cal\s*ski/.test(n))return{pat:null,sub:null,mod:'monostructural'};
-  if(/\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:null,mod:'monostructural'};
-  if(/double\s*under/.test(n)||n==='du'||n==='dus')return{pat:null,sub:null,mod:'monostructural'};
-  if(/box\s*jump/.test(n))return{pat:null,sub:null,mod:'monostructural'};
-  if(/burpee/.test(n))return{pat:'push',sub:'horizontal',mod:'monostructural'};
-  if(/\b(ski|bike|assault|echo)\b/.test(n))return{pat:null,sub:null,mod:'monostructural'};
-  if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:null,mod:'monostructural'};
-  if(/\brow\b/.test(n)&&!/(barbell|db|bent|pendlay|ring)/.test(n))return{pat:null,sub:null,mod:'monostructural'};
+  // Carries/Holds
+  if(/sled/.test(n))return{pat:null,sub:null,mod:'carries'};
+  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|bear\s*hug|waiter\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
+  if(/static\s*hold|dead\s*hang/.test(n))return{pat:null,sub:null,mod:'carries'};
+  // Monostructural — machines
+  if(/^cal\s|cal\s*row|cal\s*ski/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
+  if(/\b(ski|bike|assault|echo)\b/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
+  if(/\brow\b/.test(n)&&!/(barbell|db|bent|pendlay|ring)/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
+  // Monostructural — bounding
+  if(/\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/double\s*under/.test(n)||n==='du'||n==='dus')return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/box\s*jump/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/broad\s*jump|lateral\s*bound/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  // Burpees — gymnastics
+  if(/burpee/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
   // Core (before pull, since TTB has "bar")
   if(n==='ttb'||/toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/ghd|sit.?up|l-sit|plank|v-up|ab\s*mat|k2e|knee.*elbow|hollow/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
@@ -117,7 +124,8 @@ function cls(nm){
   // Jerk (after C&J)
   if(/jerk/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   // Hinge
-  if(/sandbag\s*(clean|load|carry)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
+  if(/sandbag\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
+  if(/sandbag\s*(clean|load)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/deadlift|rdl|romanian|good\s*morn|hip\s*ext/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/kb\s*swing|kettlebell/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/sdhp|sumo/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
@@ -149,7 +157,7 @@ function clsAll(nm){
 
 // ══════ METADATA ══════
 const PATS={push:{l:'Push',c:'#C0392B'},pull:{l:'Pull',c:'#2E86C1'},squat:{l:'Squat',c:'#E67E22'},hinge:{l:'Hinge',c:'#27AE60'},core:{l:'Core',c:'#8E44AD'}};
-const MODS={weightlifting:{l:'Weightlifting',c:'#C07D3A'},gymnastics:{l:'Gymnastics',c:'#2E86C1'},monostructural:{l:'Monostructural',c:'#5D6D7E'}};
+const MODS={weightlifting:{l:'Weightlifting',c:'#C07D3A'},gymnastics:{l:'Gymnastics',c:'#2E86C1'},monostructural:{l:'Monostructural',c:'#5D6D7E'},carries:{l:'Carries/Holds',c:'#7D6608'}};
 const PK=Object.keys(PATS);
 const MK=Object.keys(MODS);
 
@@ -224,6 +232,7 @@ function agg(sessions,start,end){
     if(pat){pF[pat]=(pF[pat]||0)+1;pT[pat]=(pT[pat]||0)+ton;pR[pat]=(pR[pat]||0)+reps;
       if(sub){const sk=pat+'_'+sub;sF[sk]=(sF[sk]||0)+1;sT[sk]=(sT[sk]||0)+ton;}}
     if(mod){mF[mod]=(mF[mod]||0)+1;mT[mod]=(mT[mod]||0)+ton;mR[mod]=(mR[mod]||0)+reps;}
+    if(mod==='monostructural'&&sub){const mk='mono_'+sub;sF[mk]=(sF[mk]||0)+1;}
     if(nm){
       if(!mvs[nm])mvs[nm]={freq:new Set(),reps:0,ton:0,pat,sub,mod,last:''};
       mvs[nm].freq.add(date);mvs[nm].reps+=reps;mvs[nm].ton+=ton;
@@ -461,11 +470,13 @@ function App(){
           <${Donut} data=${patD}/>
         </div>
         <div class="card">
-          ${CardHead({title:'Sub-Category Balance',rng:subRng,setRng:setSubRng})}
+          ${CardHead({title:'Pattern Sub-Category Detail',rng:subRng,setRng:setSubRng})}
           <div style="font-size:12px;line-height:2">
             <div><b>Push:</b> Vertical ${vpush} / Horizontal ${hpush}</div>
             <div><b>Pull:</b> Vertical ${vpull} / Horizontal ${hpull}</div>
             <div><b>Squat:</b> Traditional ${trad} / Single-Leg ${sleg}</div>
+            <div><b>Monostructural:</b> Bounding ${subAgg.sF.mono_bounding||0} / Machines ${subAgg.sF.mono_machines||0}</div>
+            <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
           </div>
         </div>
       </div>
