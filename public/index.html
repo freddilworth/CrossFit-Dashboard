@@ -313,6 +313,41 @@ function RBlk({b}){
   </div>`;
 }
 
+// ══════ CSV IMPORT HELPERS ══════
+function parseCSVFile(text){
+  const rows=[];let i=0;const n=text.length;let firstRow=true;
+  while(i<n){
+    const fields=[];
+    while(i<n){
+      let field='';
+      if(text[i]==='"'){
+        i++;
+        while(i<n){
+          if(text[i]==='"'&&text[i+1]==='"'){field+='"';i+=2;}
+          else if(text[i]==='"'){i++;break;}
+          else field+=text[i++];
+        }
+      }else{
+        while(i<n&&text[i]!==','&&text[i]!=='\n'&&text[i]!=='\r')field+=text[i++];
+      }
+      fields.push(field);
+      if(i<n&&text[i]===',')i++;else break;
+    }
+    while(i<n&&(text[i]==='\r'||text[i]==='\n'))i++;
+    if(firstRow){firstRow=false;continue;}
+    if(fields.length>=5&&fields[1]){
+      const d=parseDateStr(fields[4]||'');
+      if(d)rows.push({description:fields[1].trim(),score:(fields[2]||'').trim(),date:d});
+    }
+  }
+  return rows;
+}
+function parseDateStr(s){
+  const m=s.match(/(\d+)\/(\d+)\/(\d+)/);
+  if(!m)return'';
+  return m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');
+}
+
 // ══════ APP ══════
 function App(){
   const[ready,setReady]=useState(false);
@@ -336,6 +371,13 @@ function App(){
   const[tdRng,setTdRng]=useState('month');
   const[happyRng,setHappyRng]=useState('month');
   const[funRng,setFunRng]=useState('month');
+  const[impRows,setImpRows]=useState([]);
+  const[impSkip,setImpSkip]=useState([]);
+  const[impDone,setImpDone]=useState(0);
+  const[impTotal,setImpTotal]=useState(0);
+  const[impErrs,setImpErrs]=useState([]);
+  const[impImporting,setImpImporting]=useState(false);
+  const[impComplete,setImpComplete]=useState(false);
   const[modRng,setModRng]=useState('month');
   const[patRng,setPatRng]=useState('month');
   const[subRng,setSubRng]=useState('month');
@@ -389,8 +431,6 @@ function App(){
   }
 
   if(!ready)return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#7A7168"><div class="spin"></div></div>`;
-
-  const tabs=['Dashboard','Workout Log','Volume','PRs'];
 
   // ══════ DASHBOARD CARD HELPERS (defined at App level — stable references) ══════
   const RNGS=[['week','W'],['month','M'],['quarter','Q'],['year','Y'],['all','All']];
@@ -688,6 +728,108 @@ function App(){
     </div>`;
   }
 
+  // ══════ IMPORT TAB ══════
+  function ImportTab(){
+    function handleFile(e){
+      const file=e.target.files[0];if(!file)return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        const parsed=parseCSVFile(ev.target.result);
+        const byDate={};
+        for(const row of parsed){
+          if(!byDate[row.date])byDate[row.date]=[];
+          byDate[row.date].push({desc:row.description,score:row.score});
+        }
+        const existDates=new Set(sess.map(s=>s.date));
+        const toImport=[],toSkip=[];
+        for(const [date,entries] of Object.entries(byDate).sort(([a],[b])=>b.localeCompare(a))){
+          if(existDates.has(date))toSkip.push(date);
+          else toImport.push({date,entries});
+        }
+        setImpRows(toImport);setImpSkip(toSkip);setImpDone(0);setImpTotal(0);
+        setImpErrs([]);setImpComplete(false);setImpImporting(false);
+      };
+      reader.readAsText(file);
+    }
+    async function runImport(){
+      if(impImporting)return;
+      setImpImporting(true);setImpDone(0);setImpTotal(impRows.length);setImpErrs([]);setImpComplete(false);
+      for(const {date,entries} of impRows){
+        try{
+          const allBlocks=[];
+          for(const {desc,score} of entries){
+            const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:desc,date})});
+            if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
+            const parsed=await r.json();
+            const blocks=parsed.blocks||[];
+            if(score&&blocks.length>0){
+              const mi=blocks.findIndex(b=>b.k==='metcon');
+              const idx=mi>=0?mi:blocks.length-1;
+              if(!blocks[idx].score)blocks[idx].score=score;
+            }
+            allBlocks.push(...blocks);
+          }
+          await sbPost('sessions',[{date,blocks:allBlocks,raw_text:entries.map(e=>e.desc).join('\n\n---\n\n'),notes:'',happiness:'',fun:''}]);
+        }catch(e){setImpErrs(prev=>[...prev,date+': '+e.message]);}
+        setImpDone(d=>d+1);
+      }
+      const updated=await sbGet('sessions','order=date.desc');setSess(updated);
+      setImpComplete(true);setImpImporting(false);
+    }
+    function reset(){setImpRows([]);setImpSkip([]);setImpDone(0);setImpTotal(0);setImpErrs([]);setImpComplete(false);}
+    const hasPreview=impRows.length>0||impSkip.length>0;
+    const pct=impTotal>0?Math.round(impDone/impTotal*100):0;
+    return html`<div>
+      <div class="card">
+        <div class="ct">Import from Push Press</div>
+        ${!hasPreview&&!impImporting&&html`<div>
+          <div style="font-size:12px;color:#7A7168;margin-bottom:14px;line-height:1.7">Export your workout history from Push Press (account settings → export) and upload the CSV below. Dates already in your log will be skipped automatically. Each workout will be parsed and tagged exactly as if entered manually.</div>
+          <label style="display:inline-block;cursor:pointer">
+            <span class="btn">Choose CSV File</span>
+            <input type="file" accept=".csv" style="display:none" onChange=${handleFile}/>
+          </label>
+        </div>`}
+        ${hasPreview&&!impImporting&&!impComplete&&html`<div>
+          <div class="g2" style="margin-bottom:14px">
+            <div class="sc"><div class="sv">${impRows.length}</div><div class="sl">Sessions to Import</div></div>
+            <div class="sc"><div class="sv">${impSkip.length}</div><div class="sl">Dates Skipped</div></div>
+          </div>
+          <div style="max-height:280px;overflow-y:auto;margin-bottom:14px;border:1px solid #DDD7CE;border-radius:7px">
+            ${impRows.map(({date,entries})=>html`<div style="padding:8px 12px;border-bottom:1px solid #DDD7CE;display:flex;gap:12px;align-items:baseline">
+              <span style="font-weight:700;font-size:11px;color:#2E3F5C;white-space:nowrap;flex:0 0 90px">${fd(date)}</span>
+              <span style="font-size:11px;color:#7A7168;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${entries.map(e=>e.desc.split('\n')[0].trim()).join(' · ')}</span>
+            </div>`)}
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn" onClick=${runImport}>Import ${impRows.length} Sessions</button>
+            <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${reset}>Cancel</button>
+          </div>
+        </div>`}
+        ${impImporting&&html`<div>
+          <div style="font-size:12px;color:#7A7168;margin-bottom:8px">Importing ${impDone} of ${impTotal} sessions...</div>
+          <div style="background:#DDD7CE;border-radius:4px;height:10px;margin-bottom:12px;overflow:hidden">
+            <div style=${{background:'#2E3F5C',height:'10px',width:pct+'%',transition:'width .4s',borderRadius:'4px'}}></div>
+          </div>
+          ${impErrs.length>0&&html`<div class="err" style="margin-top:8px">${impErrs.map(e=>html`<div>${e}</div>`)}</div>`}
+        </div>`}
+        ${impComplete&&html`<div>
+          <div class="${impErrs.length>0?'streak streak-y':'streak streak-g'}" style="margin-bottom:14px;text-align:center">
+            <div style="font-size:26px;font-weight:700">${impDone-impErrs.length} / ${impTotal}</div>
+            <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;font-weight:600">Sessions Imported Successfully</div>
+          </div>
+          ${impErrs.length>0&&html`<div class="err" style="margin-bottom:12px"><div style="font-weight:700;margin-bottom:4px">Failed (${impErrs.length}):</div>${impErrs.map(e=>html`<div>${e}</div>`)}</div>`}
+          <label style="display:inline-block;cursor:pointer;margin-right:10px">
+            <span class="btn">Import Another File</span>
+            <input type="file" accept=".csv" style="display:none" onChange=${handleFile}/>
+          </label>
+          <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${reset}>Clear</button>
+        </div>`}
+      </div>
+    </div>`;
+  }
+
+  const tabs=['Dashboard','Workout Log','Volume','PRs','Import'];
+
   return html`<div>
     <div class="hdr"><div class="logo">⚡</div><div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
@@ -696,6 +838,7 @@ function App(){
       ${tab==='Workout Log'&&LogTab()}
       ${tab==='Volume'&&VolTab()}
       ${tab==='PRs'&&PrTab()}
+      ${tab==='Import'&&ImportTab()}
     </div>
   </div>`;
 }
