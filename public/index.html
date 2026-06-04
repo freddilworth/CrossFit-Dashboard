@@ -449,6 +449,8 @@ function App(){
   const[rng,setRng]=useState('month');
   const[rngDeferred,setRngDeferred]=useState('month');
   function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
+  const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
+  function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState('');
   const[inHappy,setInHappy]=useState('');
@@ -505,7 +507,21 @@ function App(){
     const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rngDeferred,i).start,calPeriod(rngDeferred,i).end));return arr;
   },[sess,rngDeferred]);
 
-  const mvTbl=useMemo(()=>Object.entries(volAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.reps-a.reps),[volAgg]);
+  const mvTbl=useMemo(()=>{
+    const rows=Object.entries(volAgg.mvs).map(([n,d])=>({n,...d}));
+    const{col,dir}=mvSort;const m=dir==='desc'?-1:1;
+    return rows.sort((a,b)=>{
+      if(col==='n')return m*(a.n||'').localeCompare(b.n||'');
+      if(col==='pat')return m*((a.pat||'')).localeCompare(b.pat||'');
+      if(col==='mod')return m*((a.mod||'')).localeCompare(b.mod||'');
+      if(col==='freq')return m*(a.freq-b.freq);
+      if(col==='reps')return m*(a.reps-b.reps);
+      if(col==='avg'){const aa=a.ton>0&&a.reps>0?a.ton/a.reps:0;const bb=b.ton>0&&b.reps>0?b.ton/b.reps:0;return m*(aa-bb);}
+      if(col==='ton')return m*(a.ton-b.ton);
+      if(col==='last')return m*(a.last||'').localeCompare(b.last||'');
+      return 0;
+    });
+  },[volAgg,mvSort]);
 
   // Submit
   async function submit(){
@@ -776,7 +792,10 @@ function App(){
         <div class="card"><div class="ct">Time Domain</div><${Donut} data=${tdD}/></div>
       </div>
       <div class="card"><div class="ct">Movement Detail</div>
-        <table><thead><tr><th>Movement</th><th>Pattern</th><th>Modality</th><th style="text-align:right">Freq</th><th style="text-align:right">Reps</th><th style="text-align:right">Avg Load</th><th style="text-align:right">Tonnage</th><th>Last</th></tr></thead>
+        <table><thead><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
+          const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
+          return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#2E3F5C':'#7A7168'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
+        })}</tr></thead>
         <tbody>${mvTbl.slice(0,40).map(m=>html`<tr>
           <td>${m.n}</td>
           <td><span style="font-size:10px;font-weight:600;color:${PATS[m.pat]?.c||'#7A7168'}">${PATS[m.pat]?.l||(m.pat||'-')}</span>${m.sub?html`<span class="mut" style="margin-left:3px">${m.sub}</span>`:''}</td>
