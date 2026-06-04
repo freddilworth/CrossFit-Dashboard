@@ -792,11 +792,12 @@ function App(){
         <div class="card"><div class="ct">Time Domain</div><${Donut} data=${tdD}/></div>
       </div>
       <div class="card"><div class="ct">Movement Detail</div>
-        <table><thead><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
+        <div style="overflow-y:auto;max-height:480px">
+        <table style="position:relative"><thead style="position:sticky;top:0;background:#FDFBF8;z-index:1"><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
           const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
           return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#2E3F5C':'#7A7168'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
         })}</tr></thead>
-        <tbody>${mvTbl.slice(0,40).map(m=>html`<tr>
+        <tbody>${mvTbl.map(m=>html`<tr>
           <td>${m.n}</td>
           <td><span style="font-size:10px;font-weight:600;color:${PATS[m.pat]?.c||'#7A7168'}">${PATS[m.pat]?.l||(m.pat||'-')}</span>${m.sub?html`<span class="mut" style="margin-left:3px">${m.sub}</span>`:''}</td>
           <td><span style="font-size:10px;font-weight:600;color:${MODS[m.mod]?.c||'#7A7168'}">${MODS[m.mod]?.l||(m.mod||'-')}</span></td>
@@ -806,6 +807,7 @@ function App(){
           <td style="text-align:right;color:${m.ton>0?'#B03A2E':'#B0A89E'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
           <td class="mut">${fd(m.last)}</td>
         </tr>`)}</tbody></table>
+        </div>
       </div>
     </div>`;
   }
