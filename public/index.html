@@ -162,7 +162,7 @@ function cls(nm){
 function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
   // Thruster: squat + vertical push
-  if(/thruster/.test(n))return[
+  if(/thrusters?/.test(n))return[
     {pat:'squat',sub:'traditional',mod:'weightlifting'},
     {pat:'push',sub:'vertical',mod:'weightlifting'}
   ];
@@ -259,6 +259,8 @@ function normMov(nm){
   if(/lo\s*hang\s*squat\s*snatch|snatch\s*singles?|squat\s*snatch/.test(n))return'Squat Snatch';
   // Clean & Jerk variants
   if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return'Clean & Jerk';
+  // Thruster
+  if(/thrusters?/.test(n))return'Thruster';
   // Lunge variants
   if(/walking\s*lunge/.test(n))return'Walking Lunge';
   if(/goblet\s*lunge/.test(n))return'Goblet Lunge';
