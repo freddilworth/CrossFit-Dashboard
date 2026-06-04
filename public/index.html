@@ -361,7 +361,7 @@ function RBlk({b}){
       ${b.mv&&html`<div style="color:#7A7168;margin-bottom:3px">${b.mv}</div>`}
       <div style="display:flex;align-items:center;gap:8px">
         <span><b>Score:</b> <span class="prv">${b.score}</span></span>
-        <span class="badge ${b.rx?'badge-rx':'badge-sc'}">${b.rx?'Rx':'Scaled'}</span>
+        <span class="badge ${b.rxPlus?'badge-rx':b.rx?'badge-rx':'badge-sc'}">${b.rxPlus?'RX+':b.rx?'Rx':'Scaled'}</span>
       </div></div>`}
   </div>`;
 }
@@ -401,6 +401,9 @@ function parseDateStr(s){
   return m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');
 }
 
+// Module-level timer for deferred rng — prevents main-thread block on period toggle
+let _rngTimer=null;
+
 // ══════ APP ══════
 function App(){
   const[ready,setReady]=useState(false);
@@ -410,6 +413,8 @@ function App(){
   const[bench,setBench]=useState([]);
   const[exp,setExp]=useState(null);
   const[rng,setRng]=useState('month');
+  const[rngDeferred,setRngDeferred]=useState('month');
+  function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState('');
   const[inHappy,setInHappy]=useState('');
@@ -454,17 +459,17 @@ function App(){
   const restDay=useMemo(()=>lastRest(sess),[sess]);
   const restDaysAgo=useMemo(()=>{if(!restDay)return'?';const d=Math.round((Date.now()-new Date(restDay+'T12:00:00'))/(86400000));return d;},[restDay]);
 
-  // Volume aggregation
-  const volP=useMemo(()=>calPeriod(rng,0),[rng]);
-  const volPrev=useMemo(()=>calPeriod(rng,1),[rng]);
+  // Volume aggregation — driven by rngDeferred so button clicks don't block the thread
+  const volP=useMemo(()=>calPeriod(rngDeferred,0),[rngDeferred]);
+  const volPrev=useMemo(()=>calPeriod(rngDeferred,1),[rngDeferred]);
   const volAgg=useMemo(()=>agg(sess,volP.start,volP.end),[sess,volP]);
   const volPrevAgg=useMemo(()=>agg(sess,volPrev.start,volPrev.end),[sess,volPrev]);
 
-  // Sparkline periods — capped at 4 to keep computation light
+  // Sparkline periods — capped at 4, driven by rngDeferred
   const spCount=4;
   const spPeriods=useMemo(()=>{
-    const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rng,i).start,calPeriod(rng,i).end));return arr;
-  },[sess,rng]);
+    const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rngDeferred,i).start,calPeriod(rngDeferred,i).end));return arr;
+  },[sess,rngDeferred]);
 
   const mvTbl=useMemo(()=>Object.entries(volAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.reps-a.reps),[volAgg]);
 
@@ -705,7 +710,7 @@ function App(){
     return html`<div>
       <div style="display:flex;gap:3px;margin-bottom:14px">
         ${[['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year'],['all','All']].map(([k,l])=>
-          html`<button class="rn ${rng===k?'act':''}" onClick=${()=>setRng(k)}>${l}</button>`)}
+          html`<button class="rn ${rng===k?'act':''}" onClick=${()=>handleSetRng(k)}>${l}</button>`)}
       </div>
       <div class="g3" style="margin-bottom:14px">
         <div class="sc"><div class="sv">${volAgg.cnt}</div><div class="sl">Sessions</div></div>
@@ -812,7 +817,7 @@ function App(){
           const allBlocks=[];const rawParts=[];
           for(const {desc,score,division} of entries){
             // Split workout from Notes section
-            const splitIdx=desc.search(/\nNotes\s*:/i);
+            const splitIdx=desc.search(/\nNotes\s*:?/i);
             const workoutPart=splitIdx>=0?desc.slice(0,splitIdx).trim():desc.trim();
             const notesPart=splitIdx>=0?desc.slice(splitIdx):'' ;
             // Extract RX+/Scale notes for parser context
