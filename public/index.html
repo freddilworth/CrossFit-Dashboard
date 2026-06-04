@@ -89,14 +89,14 @@ function cls(nm){
   if(!n)return{pat:null,sub:null,mod:null};
   // Carries/Holds
   if(/sled/.test(n))return{pat:null,sub:null,mod:'carries'};
-  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|bear\s*hug|waiter\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
+  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|\bsb\s*carry\b|bear\s*hug|waiter\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
   if(/static\s*hold|dead\s*hang/.test(n))return{pat:null,sub:null,mod:'carries'};
   // Monostructural — machines
   if(/^cal\s|cal\s*row|cal\s*ski/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
   if(/\b(ski|bike|assault|echo)\b/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
   if(/\brow\b/.test(n)&&!/(barbell|db|bent|pendlay|ring)/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
   // Monostructural — bounding
-  if(/\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/shuttle\s*run|\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/double\s*under/.test(n)||n==='du'||n==='dus')return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/box\s*jump/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/\bbjo\b|box\s*jump\s*over/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
@@ -120,6 +120,7 @@ function cls(nm){
   if(/squat\s*(clean|snatch)/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/hang\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   // Olympic hinge variants
+  if(/^hps$|hang\s*power\s*snatch/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/power\s*(clean|snatch)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(n==='c&j'||/clean\s*(&|and)\s*jerk/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/db\s*(hang\s*)?(snatch|clean)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
@@ -205,32 +206,52 @@ function clsAll(nm){
 function normMov(nm){
   if(!nm)return nm;
   const n=nm.toLowerCase().trim();
+  // Toes to bar
   if(/^t2b$|^ttb$|toes\s*to\s*bar/.test(n))return'Toes to Bar';
+  // Run variants (must come before shuttle)
+  if(/shuttle\s*run/.test(n))return'Run';
   if(/\b(run|sprint|jog)\b/.test(n))return'Run';
+  // Double / Single unders
   if(/^du$|^dus$|double\s*under/.test(n))return'Double Unders';
   if(/^su$|^sus$|single\s*under|jump\s*rope/.test(n))return'Single Unders';
-  if(/^cal\s*row$/.test(n)||(/\brow\b/.test(n)&&!/(db|barbell|ring|pull|bent|pendlay|kb|ring)/.test(n)))return'Row';
+  // Machines
+  if(/^cal\s*row$/.test(n)||(/\brow\b/.test(n)&&!/(db|barbell|ring|pull|bent|pendlay|kb)/.test(n)))return'Row';
   if(/^cal\s*ski$/.test(n)||/\bski\b/.test(n))return'Ski Erg';
   if(/cal\s*bike|assault\s*bike|echo\s*bike|\bbike\b/.test(n))return'Bike';
-  if(/^c2b$|chest.?to.?bar/.test(n))return'Chest to Bar';
+  // Pull variants — specific first
+  if(/\bc2b\b|chest.?to.?bar/.test(n))return'Chest to Bar';
   if(/^bmu$|bar\s*muscle.?up/.test(n))return'Bar Muscle-Up';
+  if(/burpee\s*pull.?up/.test(n))return'Burpee Pull-Up';
+  if(/^pull.?ups?$|^strict\s*pull.?ups?$/.test(n))return'Pull-Up';
+  // Core
   if(/^k2e$|knee.*elbow/.test(n))return'Knees to Elbow';
   if(/^hkr$|hanging\s*knee\s*raise/.test(n))return'Hanging Knee Raise';
+  // KB / DB movements
   if(/^kbs$|kb\s*swing|kettlebell\s*swing/.test(n))return'KB Swing';
+  if(/dbl\s*kb\s*farmer|double\s*kb\s*farmer/.test(n))return"Farmer's Carry";
+  if(/^sb\s*carry$|sandbag\s*carry/.test(n))return'Sandbag Carry';
+  // Box variants
   if(/^bso$|box\s*step\s*over/.test(n))return'Box Step Over';
   if(/^bsu$|box\s*step.?up/.test(n))return'Box Step Up';
   if(/^b?bjo$|burpee\s*box\s*jump\s*over/.test(n))return'Burpee Box Jump Over';
   if(/^bbso$|burpee\s*box\s*step\s*over/.test(n))return'Burpee Box Step Over';
   if(/box\s*jump/.test(n)&&!/over/.test(n))return'Box Jump';
   if(/box\s*jump\s*over|box\s*jumps?\s*over/.test(n))return'Box Jump Over';
-  if(/^burpees?$|^lateral\s*burpees?|burpees?\s*over\s*bar|line\s*facing\s*burpee/.test(n))return n.includes('over bar')?'Burpee Over Bar':'Burpee';
-  if(/^hspu$|handstand\s*push.?up/.test(n))return'HSPU';
+  // Burpee variants — specific compounds first, then collapse rest to Burpee
+  if(/burpee\s*(over\s*(rower|kb|bar)|to\s*target|bso|bju)|lateral\s*burpee|line\s*facing\s*burpee/.test(n))return'Burpee';
+  if(/^burpees?$/.test(n))return'Burpee';
+  // Push / gymnastics
+  if(/\bhspu\b|handstand\s*push.?up/.test(n))return'HSPU';
   if(/wall\s*walk/.test(n))return'Wall Walk';
   if(/wall\s*ball/.test(n))return'Wall Ball';
   if(/push.?up/.test(n)&&!/(ring|bar|hand\s*release|hrpu)/.test(n))return'Push-Up';
   if(/^hrpu$|hand\s*release\s*push/.test(n))return'Hand Release Push-Up';
+  // S2OH → Push Jerk
+  if(/^s2oh$|shoulder\s*to\s*overhead/.test(n))return'Push Jerk';
+  // Hinge / deadlift variants
+  if(/^hps$|hang\s*power\s*snatch/.test(n))return'Hang Power Snatch';
+  if(/dbl\s*(db|kb)\s*(dead\s*lift|dl|deadlift)|double\s*(db|kb)\s*dead/.test(n))return'DB Deadlift';
   if(/deadlift/.test(n)&&!/(db|dbl|sumo|rdl|romanian|kb|hang|snatch)/.test(n))return'Deadlift';
-  if(/(dbl|dbl|double)\s*(db|kb)\s*deadlift|db\s*deadlift/.test(n))return'DB Deadlift';
   return nm;
 }
 
