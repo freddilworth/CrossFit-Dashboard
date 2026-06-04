@@ -201,6 +201,39 @@ function clsAll(nm){
   return[cls(nm)];
 }
 
+// ══════ MOVEMENT NAME NORMALIZER ══════
+function normMov(nm){
+  if(!nm)return nm;
+  const n=nm.toLowerCase().trim();
+  if(/^t2b$|^ttb$|toes\s*to\s*bar/.test(n))return'Toes to Bar';
+  if(/\b(run|sprint|jog)\b/.test(n))return'Run';
+  if(/^du$|^dus$|double\s*under/.test(n))return'Double Unders';
+  if(/^su$|^sus$|single\s*under|jump\s*rope/.test(n))return'Single Unders';
+  if(/^cal\s*row$/.test(n)||(/\brow\b/.test(n)&&!/(db|barbell|ring|pull|bent|pendlay|kb|ring)/.test(n)))return'Row';
+  if(/^cal\s*ski$/.test(n)||/\bski\b/.test(n))return'Ski Erg';
+  if(/cal\s*bike|assault\s*bike|echo\s*bike|\bbike\b/.test(n))return'Bike';
+  if(/^c2b$|chest.?to.?bar/.test(n))return'Chest to Bar';
+  if(/^bmu$|bar\s*muscle.?up/.test(n))return'Bar Muscle-Up';
+  if(/^k2e$|knee.*elbow/.test(n))return'Knees to Elbow';
+  if(/^hkr$|hanging\s*knee\s*raise/.test(n))return'Hanging Knee Raise';
+  if(/^kbs$|kb\s*swing|kettlebell\s*swing/.test(n))return'KB Swing';
+  if(/^bso$|box\s*step\s*over/.test(n))return'Box Step Over';
+  if(/^bsu$|box\s*step.?up/.test(n))return'Box Step Up';
+  if(/^b?bjo$|burpee\s*box\s*jump\s*over/.test(n))return'Burpee Box Jump Over';
+  if(/^bbso$|burpee\s*box\s*step\s*over/.test(n))return'Burpee Box Step Over';
+  if(/box\s*jump/.test(n)&&!/over/.test(n))return'Box Jump';
+  if(/box\s*jump\s*over|box\s*jumps?\s*over/.test(n))return'Box Jump Over';
+  if(/^burpees?$|^lateral\s*burpees?|burpees?\s*over\s*bar|line\s*facing\s*burpee/.test(n))return n.includes('over bar')?'Burpee Over Bar':'Burpee';
+  if(/^hspu$|handstand\s*push.?up/.test(n))return'HSPU';
+  if(/wall\s*walk/.test(n))return'Wall Walk';
+  if(/wall\s*ball/.test(n))return'Wall Ball';
+  if(/push.?up/.test(n)&&!/(ring|bar|hand\s*release|hrpu)/.test(n))return'Push-Up';
+  if(/^hrpu$|hand\s*release\s*push/.test(n))return'Hand Release Push-Up';
+  if(/deadlift/.test(n)&&!/(db|dbl|sumo|rdl|romanian|kb|hang|snatch)/.test(n))return'Deadlift';
+  if(/(dbl|dbl|double)\s*(db|kb)\s*deadlift|db\s*deadlift/.test(n))return'DB Deadlift';
+  return nm;
+}
+
 // ══════ CLASSIFIER CACHE ══════
 const _clsCache={};
 function clsAllCached(nm){
@@ -287,11 +320,12 @@ function agg(sessions,start,end){
     if(mod){mF[mod]=(mF[mod]||0)+1;mT[mod]=(mT[mod]||0)+ton;mR[mod]=(mR[mod]||0)+reps;}
     if(mod==='monostructural'&&sub){const mk='mono_'+sub;sF[mk]=(sF[mk]||0)+1;}
     if(nm){
-      if(!mvs[nm])mvs[nm]={freq:new Set(),reps:0,ton:0,pat,sub,mod,last:''};
-      mvs[nm].freq.add(date);mvs[nm].reps+=reps;mvs[nm].ton+=ton;
-      if(date>mvs[nm].last)mvs[nm].last=date;
-      if(pat&&!mvs[nm].pat)mvs[nm].pat=pat;
-      if(mod&&!mvs[nm].mod)mvs[nm].mod=mod;
+      const key=normMov(nm)||nm;
+      if(!mvs[key])mvs[key]={freq:new Set(),reps:0,ton:0,pat,sub,mod,last:''};
+      mvs[key].freq.add(date);mvs[key].reps+=reps;mvs[key].ton+=ton;
+      if(date>mvs[key].last)mvs[key].last=date;
+      if(pat&&!mvs[key].pat)mvs[key].pat=pat;
+      if(mod&&!mvs[key].mod)mvs[key].mod=mod;
     }
   }
   for(const sess of filt){
