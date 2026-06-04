@@ -155,6 +155,13 @@ function clsAll(nm){
   return[cls(nm)];
 }
 
+// ══════ CLASSIFIER CACHE ══════
+const _clsCache={};
+function clsAllCached(nm){
+  if(_clsCache[nm])return _clsCache[nm];
+  return(_clsCache[nm]=clsAll(nm));
+}
+
 // ══════ METADATA ══════
 const PATS={push:{l:'Push',c:'#C0392B'},pull:{l:'Pull',c:'#2E86C1'},squat:{l:'Squat',c:'#E67E22'},hinge:{l:'Hinge',c:'#27AE60'},core:{l:'Core',c:'#8E44AD'}};
 const MODS={weightlifting:{l:'Weightlifting',c:'#C07D3A'},gymnastics:{l:'Gymnastics',c:'#2E86C1'},monostructural:{l:'Monostructural',c:'#5D6D7E'},carries:{l:'Carries/Holds',c:'#7D6608'}};
@@ -244,7 +251,7 @@ function agg(sessions,start,end){
   for(const sess of filt){
     for(const b of(sess.blocks||[])){
       if(b.k==='strength'||b.k==='accessory'){
-        const cs=clsAll(b.mov);
+        const cs=clsAllCached(b.mov);
         const reps=(b.sets||[]).reduce((s,x)=>s+(x.r||0),0);
         const ton=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,c.mod,reps,ton,sess.date));
@@ -252,7 +259,7 @@ function agg(sessions,start,end){
       if(b.k==='metcon'){
         const tdv=b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
-          const cs=clsAll(pm.n);
+          const cs=clsAllCached(pm.n);
           cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,c.mod,pm.r||0,(pm.r||0)*(pm.w||0),sess.date));
         }
       }
@@ -407,11 +414,15 @@ function App(){
   const volAgg=useMemo(()=>agg(sess,volP.start,volP.end),[sess,volP]);
   const volPrevAgg=useMemo(()=>agg(sess,volPrev.start,volPrev.end),[sess,volPrev]);
 
+  // Debounced rng for sparklines — main charts update immediately, sparklines follow 150ms later
+  const[rngSpark,setRngSpark]=useState('month');
+  useEffect(()=>{const t=setTimeout(()=>setRngSpark(rng),150);return()=>clearTimeout(t);},[rng]);
+
   // Sparkline periods
-  const spCount=rng==='week'?8:rng==='month'?6:rng==='quarter'?4:3;
+  const spCount=rngSpark==='week'?8:rngSpark==='month'?6:rngSpark==='quarter'?4:3;
   const spPeriods=useMemo(()=>{
-    const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rng,i).start,calPeriod(rng,i).end));return arr;
-  },[sess,rng,spCount]);
+    const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rngSpark,i).start,calPeriod(rngSpark,i).end));return arr;
+  },[sess,rngSpark,spCount]);
 
   const mvTbl=useMemo(()=>Object.entries(volAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.reps-a.reps),[volAgg]);
 
