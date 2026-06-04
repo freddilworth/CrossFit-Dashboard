@@ -332,15 +332,16 @@ function agg(sessions,start,end){
     for(const b of(sess.blocks||[])){
       if(b.k==='strength'||b.k==='accessory'){
         const cs=clsAllCached(b.mov);
-        const reps=(b.sets||[]).reduce((s,x)=>s+(x.r||0),0);
-        const ton=(b.sets||[]).reduce((s,x)=>s+(x.r||0)*(x.w||0),0);
+        const reps=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0),0);
+        const ton=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0)*(parseFloat(x.w)||0),0);
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,c.mod,reps,ton,sess.date));
       }
       if(b.k==='metcon'){
         const tdv=b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
           const cs=clsAllCached(pm.n);
-          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,c.mod,pm.r||0,(pm.r||0)*(pm.w||0),sess.date));
+          const pr=parseFloat(pm.r)||0;const pw=parseFloat(pm.w)||0;
+          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,c.mod,pr,pr*pw,sess.date));
         }
       }
     }
@@ -755,7 +756,7 @@ function App(){
     const modFD=MK.map(k=>({label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const modTD=MK.map(k=>({label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const tdD=[{label:'Short',val:volAgg.td.short,color:'#C0392B'},{label:'Medium',val:volAgg.td.med,color:'#2E86C1'},{label:'Long',val:volAgg.td.long,color:'#2E3F5C'}];
-    const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+b,0)+Object.values(volAgg.mT).reduce((a,b)=>a+b,0);
+    const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0);
 
     return html`<div>
       <div style="display:flex;gap:3px;margin-bottom:14px">
