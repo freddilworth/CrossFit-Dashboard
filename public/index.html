@@ -99,13 +99,23 @@ function cls(nm){
   if(/\b(run|sprint|jog)\b/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/double\s*under/.test(n)||n==='du'||n==='dus')return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/box\s*jump/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/\bbjo\b|box\s*jump\s*over/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
+  if(/\bbso\b|box\s*step\s*over/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/broad\s*jump|lateral\s*bound/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
-  // Burpees — gymnastics
+  // Burpees — gymnastics (must come before general push-up/horizontal checks)
   if(/burpee/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
-  // Core (before pull, since TTB has "bar")
+  // Core
   if(n==='ttb'||/toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/ghd|sit.?up|l-sit|plank|v-up|ab\s*mat|k2e|knee.*elbow|hollow/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
+  if(/\bhkr\b|hanging\s*knee\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
+  // Pull — vertical (BMU before generic muscle-up)
+  if(/\bbmu\b|bar\s*muscle.?up/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
+  if(/pull.?up|muscle.?up|c2b|chest.?to|rope\s*climb|butterfly|kipping/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
+  if(/strict\s*pull/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
+  // Pull — horizontal
+  if(/ring\s*row|\brr\b/.test(n))return{pat:'pull',sub:'horizontal',mod:'gymnastics'};
+  if(/(barbell|db|pendlay|bent)\s*row/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
   // Olympic squat variants
   if(/squat\s*(clean|snatch)/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/hang\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
@@ -116,39 +126,75 @@ function cls(nm){
   if(/hang\s*(power\s*)?(clean|snatch)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/\bclean\b/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/\bsnatch\b/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
+  if(/over\s*shoulder/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   // Squat
   if(/wall\s*ball/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/squat|ohs\b|overhead\s*sq|goblet/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/air\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'gymnastics'};
+  if(/\bbsu\b|box\s*step.?up/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
   if(/pistol|lunge|step.?up|split\s*sq|bulgarian/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
-  // Jerk (after C&J)
+  // Jerk
   if(/jerk/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   // Hinge
   if(/sandbag\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
-  if(/sandbag\s*(clean|load)/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
+  if(/sandbag/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/deadlift|rdl|romanian|good\s*morn|hip\s*ext/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
-  if(/kb\s*swing|kettlebell/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
+  if(/\bkbs\b|kb\s*swing|kettlebell\s*swing/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
+  if(/kettlebell/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
   if(/sdhp|sumo/.test(n))return{pat:'hinge',sub:null,mod:'weightlifting'};
-  // Push
-  if(/press/.test(n)&&!/bench/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
+  // Push — vertical
   if(/wall\s*walk/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
-  if(/hspu|handstand/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
+  if(/hspu|handstand\s*(push|walk)/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
+  if(/hs\s*walk|handstand\s*walk/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
   if(/s2oh|shoulder\s*to/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   if(/\bdip/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
-  if(/bench/.test(n))return{pat:'push',sub:'horizontal',mod:'weightlifting'};
-  if(/push.?up/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
-  // Pull
-  if(/pull.?up|muscle.?up|c2b|chest.?to|rope\s*climb|butterfly|kipping/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
-  if(/strict\s*pull/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
-  if(/ring\s*row/.test(n))return{pat:'pull',sub:'horizontal',mod:'gymnastics'};
-  if(/(barbell|db|pendlay|bent)\s*row/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
+  if(/press/.test(n)&&!/bench|floor/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
+  // Push — horizontal
+  if(/bench|floor\s*press/.test(n))return{pat:'push',sub:'horizontal',mod:'weightlifting'};
+  if(/\bhrpu\b|hand\s*release\s*push/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
+  if(/push.?up|seal\s*walk/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
   return{pat:null,sub:null,mod:null};
 }
 
 // ══════ MULTI-PATTERN CLASSIFIER ══════
 function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
+  // Thruster: squat + vertical push
   if(/thruster/.test(n))return[
+    {pat:'squat',sub:'traditional',mod:'weightlifting'},
+    {pat:'push',sub:'vertical',mod:'weightlifting'}
+  ];
+  // BBJO / BJO: burpee (push/horizontal) + box jump (bounding)
+  if(/\bbbjo\b|burpee\s*box\s*jump\s*over/.test(n))return[
+    {pat:'push',sub:'horizontal',mod:'gymnastics'},
+    {pat:null,sub:'bounding',mod:'monostructural'}
+  ];
+  // BBSO: burpee (push/horizontal) + box step over (bounding)
+  if(/\bbbso\b|burpee\s*box\s*step\s*over/.test(n))return[
+    {pat:'push',sub:'horizontal',mod:'gymnastics'},
+    {pat:null,sub:'bounding',mod:'monostructural'}
+  ];
+  // Devil's Press: burpee (push/horizontal) + DB snatch (hinge)
+  if(/devil'?s?\s*press/.test(n))return[
+    {pat:'push',sub:'horizontal',mod:'gymnastics'},
+    {pat:'hinge',sub:null,mod:'weightlifting'}
+  ];
+  // Man Maker: push-up + row + squat clean + thruster
+  if(/man\s*maker/.test(n))return[
+    {pat:'push',sub:'horizontal',mod:'gymnastics'},
+    {pat:'pull',sub:'horizontal',mod:'gymnastics'},
+    {pat:'squat',sub:'traditional',mod:'weightlifting'},
+    {pat:'push',sub:'vertical',mod:'weightlifting'}
+  ];
+  // Curtis P: clean + FR lunge + push press
+  if(/curtis\s*p/.test(n))return[
+    {pat:'hinge',sub:null,mod:'weightlifting'},
+    {pat:'squat',sub:'single_leg',mod:'weightlifting'},
+    {pat:'push',sub:'vertical',mod:'weightlifting'}
+  ];
+  // Cluster: squat clean + thruster
+  if(/\bcluster\b/.test(n))return[
+    {pat:'hinge',sub:null,mod:'weightlifting'},
     {pat:'squat',sub:'traditional',mod:'weightlifting'},
     {pat:'push',sub:'vertical',mod:'weightlifting'}
   ];
@@ -344,7 +390,7 @@ function parseCSVFile(text){
     if(firstRow){firstRow=false;continue;}
     if(fields.length>=5&&fields[1]){
       const d=parseDateStr(fields[4]||'');
-      if(d)rows.push({description:fields[1].trim(),score:(fields[2]||'').trim(),date:d});
+      if(d)rows.push({description:fields[1].trim(),score:(fields[2]||'').trim(),division:(fields[3]||'').trim(),date:d});
     }
   }
   return rows;
@@ -745,7 +791,7 @@ function App(){
         const byDate={};
         for(const row of parsed){
           if(!byDate[row.date])byDate[row.date]=[];
-          byDate[row.date].push({desc:row.description,score:row.score});
+          byDate[row.date].push({desc:row.description,score:row.score,division:row.division});
         }
         const existDates=new Set(sess.map(s=>s.date));
         const toImport=[],toSkip=[];
@@ -763,20 +809,38 @@ function App(){
       setImpImporting(true);setImpDone(0);setImpTotal(impRows.length);setImpErrs([]);setImpComplete(false);
       for(const {date,entries} of impRows){
         try{
-          const allBlocks=[];
-          for(const {desc,score} of entries){
-            const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:desc,date})});
+          const allBlocks=[];const rawParts=[];
+          for(const {desc,score,division} of entries){
+            // Split workout from Notes section
+            const splitIdx=desc.search(/\nNotes\s*:/i);
+            const workoutPart=splitIdx>=0?desc.slice(0,splitIdx).trim():desc.trim();
+            const notesPart=splitIdx>=0?desc.slice(splitIdx):'' ;
+            // Extract RX+/Scale notes for parser context
+            const rxPlusMatch=notesPart.match(/RX\+\s*is\s*([^\n]+)/i);
+            const scaleMatch=notesPart.match(/Scale\s*is\s*([^\n]+)/i);
+            const rxPlusNote=rxPlusMatch?rxPlusMatch[1].trim():'';
+            const scaleNote=scaleMatch?scaleMatch[1].trim():'';
+            // Build parse text with division context
+            let parseText=workoutPart;
+            const div=(division||'').toUpperCase();
+            if(div==='RX+'&&rxPlusNote)parseText+='\n\nAthlete performed RX+. RX+ modifications: '+rxPlusNote;
+            else if(div==='SCALED'&&scaleNote)parseText+='\n\nAthlete scaled. Scale modifications: '+scaleNote;
+            const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:parseText,date})});
             if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
             const parsed=await r.json();
             const blocks=parsed.blocks||[];
-            if(score&&blocks.length>0){
+            // Always override score from CSV; store division
+            if(blocks.length>0){
               const mi=blocks.findIndex(b=>b.k==='metcon');
               const idx=mi>=0?mi:blocks.length-1;
-              if(!blocks[idx].score)blocks[idx].score=score;
+              if(score)blocks[idx].score=score;
+              blocks[idx].rx=div==='RX'||div==='RX+'?true:false;
+              if(div==='RX+')blocks[idx].rxPlus=true;
             }
             allBlocks.push(...blocks);
+            rawParts.push(workoutPart);
           }
-          await sbPost('sessions',[{date,blocks:allBlocks,raw_text:entries.map(e=>e.desc).join('\n\n---\n\n'),notes:'',happiness:'',fun:''}]);
+          await sbPost('sessions',[{date,blocks:allBlocks,raw_text:rawParts.join('\n\n---\n\n'),notes:'',happiness:'',fun:''}]);
         }catch(e){setImpErrs(prev=>[...prev,date+': '+e.message]);}
         setImpDone(d=>d+1);
       }
