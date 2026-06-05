@@ -159,47 +159,55 @@ function cls(nm){
 }
 
 // ══════ MULTI-PATTERN CLASSIFIER ══════
+const H={pat:'hinge',sub:null,mod:'weightlifting'};
+const PV={pat:'push',sub:'vertical',mod:'weightlifting'};
+const PH={pat:'push',sub:'horizontal',mod:'gymnastics'};
+const RV={pat:'pull',sub:'vertical',mod:'weightlifting'};
+const RH={pat:'pull',sub:'horizontal',mod:'weightlifting'};
+const SQ={pat:'squat',sub:'traditional',mod:'weightlifting'};
+const SL={pat:'squat',sub:'single_leg',mod:'weightlifting'};
+const BD={pat:null,sub:'bounding',mod:'monostructural'};
+
 function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
-  // Thruster: squat + vertical push
-  if(/thrusters?/.test(n))return[
-    {pat:'squat',sub:'traditional',mod:'weightlifting'},
-    {pat:'push',sub:'vertical',mod:'weightlifting'}
-  ];
-  // BBJO / BJO: burpee (push/horizontal) + box jump (bounding)
-  if(/\bbbjo\b|burpee\s*box\s*jump\s*over/.test(n))return[
-    {pat:'push',sub:'horizontal',mod:'gymnastics'},
-    {pat:null,sub:'bounding',mod:'monostructural'}
-  ];
-  // BBSO: burpee (push/horizontal) + box step over (bounding)
-  if(/\bbbso\b|burpee\s*box\s*step\s*over/.test(n))return[
-    {pat:'push',sub:'horizontal',mod:'gymnastics'},
-    {pat:null,sub:'bounding',mod:'monostructural'}
-  ];
-  // Devil's Press: burpee (push/horizontal) + DB snatch (hinge)
-  if(/devil'?s?\s*press/.test(n))return[
-    {pat:'push',sub:'horizontal',mod:'gymnastics'},
-    {pat:'hinge',sub:null,mod:'weightlifting'}
-  ];
-  // Man Maker: push-up + row + squat clean + thruster
-  if(/man\s*maker/.test(n))return[
-    {pat:'push',sub:'horizontal',mod:'gymnastics'},
-    {pat:'pull',sub:'horizontal',mod:'gymnastics'},
-    {pat:'squat',sub:'traditional',mod:'weightlifting'},
-    {pat:'push',sub:'vertical',mod:'weightlifting'}
-  ];
-  // Curtis P: clean + FR lunge + push press
-  if(/curtis\s*p/.test(n))return[
-    {pat:'hinge',sub:null,mod:'weightlifting'},
-    {pat:'squat',sub:'single_leg',mod:'weightlifting'},
-    {pat:'push',sub:'vertical',mod:'weightlifting'}
-  ];
-  // Cluster: squat clean + thruster
-  if(/\bcluster\b/.test(n))return[
-    {pat:'hinge',sub:null,mod:'weightlifting'},
-    {pat:'squat',sub:'traditional',mod:'weightlifting'},
-    {pat:'push',sub:'vertical',mod:'weightlifting'}
-  ];
+  const isDB=/(^|\s)(sa\s*|dbl\s*|double\s*|alt\s*)?(db|dumbbell|kb|kettlebell)/.test(n);
+
+  // ── Compound gymnastics / odd-object ──
+  if(/thrusters?/.test(n))return[SQ,PV];
+  if(/\bbbjo\b|burpee\s*box\s*jump\s*over/.test(n))return[PH,BD];
+  if(/\bbbso\b|burpee\s*box\s*step\s*over/.test(n))return[PH,BD];
+  if(/devil'?s?\s*press/.test(n))return[PH,H,RV];
+  if(/man\s*maker/.test(n))return[PH,{pat:'pull',sub:'horizontal',mod:'gymnastics'},SQ,PV];
+  if(/curtis\s*p/.test(n))return[H,RV,SL,PV];
+  if(/\bcluster\b/.test(n))return[H,RV,SQ,PV];
+
+  // ── Clean & Jerk: hinge + vertical pull + vertical push ──
+  if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return[H,RV,PV];
+
+  // ── Snatch DL / Snatch pull to hip: hinge + horizontal pull ──
+  if(/snatch\s*(dead\s*lift|dl\b|pull)|snatch\s*dl\s*to/.test(n))return[H,RH];
+
+  // ── SDHP: hinge + vertical pull ──
+  if(/\bsdhp\b|sumo\s*(dead\s*lift|dl)?\s*high\s*pull/.test(n))return[H,RV];
+
+  // ── Deadlift family: hinge + horizontal pull ──
+  if(/\brdl\b|romanian/.test(n))return[H,RH];
+  if(/dead\s*lift|deadlift/.test(n)&&!/snatch|high\s*pull|sdhp/.test(n))return[H,RH];
+
+  // ── Swing: hinge + vertical pull ──
+  if(/\bswing\b/.test(n))return[H,RV];
+
+  // ── Snatch variants: hinge + vertical pull ──
+  // Catches barbell and DB/KB snatches, all hang/power/squat/floating variations
+  if(/snatch/.test(n)&&!/dead\s*lift|dl\b|pull\b/.test(n))return[H,RV];
+
+  // ── Clean variants (no jerk): hinge + vertical pull ──
+  // Catches barbell and DB/KB cleans, all hang/power/squat/lo/hi/floating variations
+  if(/\bclean\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RV];
+
+  // ── Sandbag clean / SB over shoulder: hinge + horizontal pull ──
+  if(/sandbag|over\s*shoulder/.test(n))return[H,RH];
+
   return[cls(nm)];
 }
 
