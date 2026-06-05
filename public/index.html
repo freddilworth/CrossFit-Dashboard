@@ -347,6 +347,21 @@ function Delta({cur,prev}){
   return html`<span class="delta delta-flat">—</span>`;
 }
 
+// ══════ WEIGHT PARSING HELPERS ══════
+function parseWeight(w){
+  if(!w&&w!==0)return 0;
+  const s=String(w).trim();
+  if(s.endsWith('%'))return 0; // percentage-based — actual weight unknown
+  return parseFloat(s)||0;
+}
+function parseScoreWeight(score){
+  if(!score)return 0;
+  // Matches "N @ W" or "W @ N" — take the larger number as the weight
+  const m=String(score).match(/(\d+\.?\d*)\s*[@x]\s*(\d+\.?\d*)/);
+  if(!m)return 0;
+  return Math.max(parseFloat(m[1])||0,parseFloat(m[2])||0);
+}
+
 // ══════ AGGREGATION ══════
 function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
@@ -371,7 +386,12 @@ function agg(sessions,start,end){
       if(b.k==='strength'||b.k==='accessory'){
         const cs=clsAllCached(b.mov);
         const reps=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0),0);
-        const ton=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0)*(parseFloat(x.w)||0),0);
+        let ton=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0)*parseWeight(x.w),0);
+        // If no tonnage from sets (percentage-based or empty), estimate from score field
+        if(ton===0&&reps>0){
+          const sw=parseScoreWeight(b.score);
+          if(sw>0)ton=reps*sw;
+        }
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,c.mod,reps,ton,sess.date));
       }
       if(b.k==='metcon'){
