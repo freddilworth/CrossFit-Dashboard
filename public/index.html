@@ -351,15 +351,47 @@ function Delta({cur,prev}){
 function parseWeight(w){
   if(!w&&w!==0)return 0;
   const s=String(w).trim();
-  if(s.endsWith('%'))return 0; // percentage-based — actual weight unknown
+  if(s.endsWith('%'))return 0;
   return parseFloat(s)||0;
 }
 function parseScoreWeight(score){
   if(!score)return 0;
-  // Matches "N @ W" or "W @ N" — take the larger number as the weight
   const m=String(score).match(/(\d+\.?\d*)\s*[@x]\s*(\d+\.?\d*)/);
   if(!m)return 0;
   return Math.max(parseFloat(m[1])||0,parseFloat(m[2])||0);
+}
+function parseScoreReps(score){
+  if(!score)return 0;
+  const m=String(score).match(/(\d+\.?\d*)\s*[@x]\s*(\d+\.?\d*)/);
+  if(!m)return 0;
+  return Math.min(parseFloat(m[1])||0,parseFloat(m[2])||0);
+}
+function calcStrengthTon(sets,score){
+  // No sets — estimate from score (e.g. "1 @ 325" or "5 @ 245")
+  if(!sets||!sets.length){
+    const sw=parseScoreWeight(score);const sr=parseScoreReps(score);
+    return sw>0&&sr>0?sw*sr:0;
+  }
+  // Helper to read pct from w or p field
+  const getPct=x=>{const v=String(x.w||x.p||'').trim();return v.endsWith('%')?parseFloat(v)/100:null;};
+  const hasPct=sets.some(x=>getPct(x)!==null);
+  if(!hasPct){
+    // Direct weights — straightforward
+    return sets.reduce((s,x)=>s+(parseFloat(x.r)||0)*parseWeight(x.w||x.p),0);
+  }
+  // Percentage-based: back-calculate implied 1RM from score anchor
+  const sw=parseScoreWeight(score);
+  if(!sw)return 0;
+  const pcts=sets.map(getPct).filter(p=>p!==null&&p>0);
+  if(!pcts.length)return 0;
+  const implied1RM=sw/Math.max(...pcts);
+  const scoreReps=parseScoreReps(score);
+  return sets.reduce((s,x)=>{
+    const r=parseFloat(x.r)||(x.amrap?scoreReps:0);
+    const pct=getPct(x);
+    const w=pct!==null?Math.round(pct*implied1RM):parseWeight(x.w||x.p);
+    return s+r*w;
+  },0);
 }
 
 // ══════ AGGREGATION ══════
@@ -385,13 +417,8 @@ function agg(sessions,start,end){
     for(const b of(sess.blocks||[])){
       if(b.k==='strength'||b.k==='accessory'){
         const cs=clsAllCached(b.mov);
-        const reps=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0),0);
-        let ton=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||0)*parseWeight(x.w),0);
-        // If no tonnage from sets (percentage-based or empty), estimate from score field
-        if(ton===0&&reps>0){
-          const sw=parseScoreWeight(b.score);
-          if(sw>0)ton=reps*sw;
-        }
+        const reps=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0);
+        const ton=calcStrengthTon(b.sets,b.score);
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,c.mod,reps,ton,sess.date));
       }
       if(b.k==='metcon'){
