@@ -534,8 +534,8 @@ function App(){
   const[prs,setPrs]=useState([]);
   const[bench,setBench]=useState([]);
   const[exp,setExp]=useState(null);
-  const[rng,setRng]=useState('month');
-  const[rngDeferred,setRngDeferred]=useState('month');
+  const[rng,setRng]=useState('all');
+  const[rngDeferred,setRngDeferred]=useState('all');
   function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
   const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
   function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
@@ -550,9 +550,9 @@ function App(){
   const[parsing,setParsing]=useState(false);
   const[pErr,setPErr]=useState('');
   const[pOk,setPOk]=useState('');
-  const[tdRng,setTdRng]=useState('month');
-  const[happyRng,setHappyRng]=useState('month');
-  const[funRng,setFunRng]=useState('month');
+  const[tdRng,setTdRng]=useState('all');
+  const[happyRng,setHappyRng]=useState('all');
+  const[funRng,setFunRng]=useState('all');
   const[impRows,setImpRows]=useState([]);
   const[impSkip,setImpSkip]=useState([]);
   const[impDone,setImpDone]=useState(0);
@@ -560,9 +560,9 @@ function App(){
   const[impErrs,setImpErrs]=useState([]);
   const[impImporting,setImpImporting]=useState(false);
   const[impComplete,setImpComplete]=useState(false);
-  const[modRng,setModRng]=useState('month');
-  const[patRng,setPatRng]=useState('month');
-  const[subRng,setSubRng]=useState('month');
+  const[modRng,setModRng]=useState('all');
+  const[patRng,setPatRng]=useState('all');
+  const[subRng,setSubRng]=useState('all');
 
   useEffect(()=>{let c=false;(async()=>{
     await sbInit();
