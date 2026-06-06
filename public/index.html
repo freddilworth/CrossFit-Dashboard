@@ -630,17 +630,22 @@ function App(){
   // ══════ WORKOUT GENERATOR HELPERS ══════
   function buildAthleteData(){
     const today=new Date().toISOString().slice(0,10);
-    const cut=new Date();cut.setDate(cut.getDate()-14);const cutStr=cut.toISOString().slice(0,10);
-    const recent=sess.filter(s=>s.date>=cutStr).sort((a,b)=>b.date.localeCompare(a.date));
-    const recentSessions=recent.length===0?'No sessions in last 14 days':recent.map(s=>{
+    const cut14=new Date();cut14.setDate(cut14.getDate()-14);const cutStr=cut14.toISOString().slice(0,10);
+    const cut3=new Date();cut3.setDate(cut3.getDate()-3);const cut3Str=cut3.toISOString().slice(0,10);
+    const allRecent=sess.filter(s=>s.date>=cutStr).sort((a,b)=>b.date.localeCompare(a.date));
+    function fmtSession(s){
       const parts=(s.blocks||[]).map(b=>{
         if(b.k==='strength')return'STR: '+(b.mov||'Unknown');
-        if(b.k==='metcon'){const mvs=(b.pm||[]).slice(0,5).map(p=>normMov(p.n)||p.n).join(', ');return'MET: '+(b.fmt||'Metcon')+' ('+mvs+') | '+(b.td||'?')+' domain | score: '+(b.score||'?');}
+        if(b.k==='metcon'){const mvs=(b.pm||[]).slice(0,6).map(p=>normMov(p.n)||p.n).join(', ');return'MET: '+(b.fmt||'Metcon')+' ('+mvs+') | '+(b.td||'?')+' domain';}
         if(b.k==='accessory')return'ACC: '+(b.mov||'Unknown');
         return'';
       }).filter(Boolean).join(' | ');
       return fd(s.date)+': '+(parts||'Session');
-    }).join('\n');
+    }
+    const last3=allRecent.filter(s=>s.date>cut3Str);
+    const older=allRecent.filter(s=>s.date<=cut3Str);
+    const last3Days=last3.length===0?'No sessions in last 3 days — no avoidance constraints.':last3.map(fmtSession).join('\n');
+    const recentSessions=older.length===0?'No sessions in days 4–14.':older.map(fmtSession).join('\n');
     const allAgg=agg(sess,'2000-01-01',today);
     const q90=calPeriod('quarter',0);const tdAgg=agg(sess,q90.start,q90.end);
     const patternBalance=PK.map(k=>{
@@ -653,7 +658,7 @@ function App(){
     const prStr=prs.filter(p=>p.category==='lift').map(p=>p.name+': '+p.pr_value+' lbs').join(', ')||'None logged';
     const moodSatisfied=allAgg.mood.hTotal>0?Math.round(allAgg.mood.happy/allAgg.mood.hTotal*100)+'%':'N/A';
     const moodFun=allAgg.mood.fTotal>0?Math.round(allAgg.mood.fun/allAgg.mood.fTotal*100)+'%':'N/A';
-    return{recentSessions,patternBalance,timeDomain,topMovements,prs:prStr,moodSatisfied,moodFun};
+    return{last3Days,recentSessions,patternBalance,timeDomain,topMovements,prs:prStr,moodSatisfied,moodFun};
   }
   async function generate(){
     if(genLoading||!Object.values(genComponents).some(Boolean))return;

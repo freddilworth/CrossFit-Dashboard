@@ -9,46 +9,54 @@ export default async function handler(req, res) {
   const { components, context, messages, athleteData } = req.body;
   if (!messages || !athleteData) return res.status(400).json({ error: 'Missing required fields' });
 
-  const compList = Object.entries(components || {})
-    .filter(([, v]) => v)
-    .map(([k]) => k.charAt(0).toUpperCase() + k.slice(1))
-    .join(', ');
+  const selected = Object.entries(components || {}).filter(([, v]) => v).map(([k]) => k);
+  const compList = selected.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(', ');
 
-  const system = `You are an experienced CrossFit coach generating personalized workout recommendations for a specific athlete. You have access to their complete training history.
+  const system = `You are an experienced CrossFit coach generating personalized workout recommendations for a specific athlete.
 
-ATHLETE TRAINING PROFILE
+━━━ AVOIDANCE WINDOW — LAST 3 DAYS (highest priority) ━━━
+These sessions are RECENT. Do not repeat these movements or dominant patterns today. This is the most important constraint.
 
-Recent Sessions (Last 14 Days):
+${athleteData.last3Days}
+
+━━━ BROADER RECENT CONTEXT — DAYS 4–14 ━━━
 ${athleteData.recentSessions}
 
-Pattern Balance (All Time):
+━━━ ALL-TIME PATTERN BALANCE ━━━
 ${athleteData.patternBalance}
 
-Time Domain Distribution (Last 90 Days):
+━━━ TIME DOMAIN DISTRIBUTION (Last 90 Days) ━━━
 ${athleteData.timeDomain}
 
-Top Movements by Frequency:
+━━━ TOP MOVEMENTS BY FREQUENCY ━━━
 ${athleteData.topMovements}
 
-Key PRs:
+━━━ KEY PRs ━━━
 ${athleteData.prs || 'None logged'}
 
-Recent Training Satisfaction: ${athleteData.moodSatisfied}% | Fun: ${athleteData.moodFun}%
+━━━ RECENT MOOD ━━━
+Satisfaction: ${athleteData.moodSatisfied} | Fun: ${athleteData.moodFun}
 
----
-
-WORKOUT REQUEST
-Components: ${compList || 'Full workout'}
+━━━ WORKOUT REQUEST ━━━
+Generate ONLY these components — nothing else: ${compList || 'full workout'}
 ${context ? `Athlete notes: ${context}` : ''}
 
-PROGRAMMING GUIDELINES
-- Strength: prescribe sets/reps/percentage (e.g. "4x5 @ 75%"), never specific weights. Base percentages on sound periodization principles and the athlete's training history and implied 1RMs.
-- Metcon: choose format, time domain, and movements based on what complements recent training. State the intended stimulus (e.g. "aerobic capacity", "lactate threshold", "muscular endurance"). Let the data guide the time domain.
-- Accessory: 2-3 exercises targeting underworked patterns, supporting muscle groups, or movement quality. Keep it purposeful and brief.
-- You may suggest movements not in the athlete's history if they fit the stimulus and skill level.
-- Format clearly with a header for each component.
-- After the workout, add a brief "Reasoning" section (3-5 sentences) explaining the programming choices in plain language.
-- Be concise. A real athlete will read this and go do it.`;
+━━━ PROGRAMMING RULES ━━━
+COMPONENTS: Generate strictly the components listed above. Do not add extra components not requested.
+
+STRENGTH: Prescribe sets/reps/percentage only (e.g. "4x5 @ 75%"). Never specific weights. Base percentages on sound periodization and the athlete's implied 1RMs from their PR data.
+
+METCON: Choose ONE format that is internally consistent:
+  - For Time: fixed reps, athlete finishes as fast as possible. No time cap needed unless stated.
+  - AMRAP: athlete repeats the same round for the full time window. Do NOT combine with descending reps — that is contradictory.
+  - EMOM: fixed work per minute.
+  - Intervals: fixed work/rest structure.
+  Never mix "descending ladder" with "AMRAP." If you want a descending ladder, use "For Time." If you want an AMRAP, use a fixed round.
+  State the intended stimulus (e.g. "aerobic capacity", "lactate threshold").
+
+ACCESSORY: 2-3 exercises targeting underworked patterns, supporting muscle groups, or movement quality.
+
+GENERAL: Format with a clear header per component. End with a brief "Reasoning" section (3-5 sentences) explaining the programming choices. Be concise — a real athlete will read this and go train.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
