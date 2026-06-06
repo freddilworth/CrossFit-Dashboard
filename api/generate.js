@@ -59,7 +59,7 @@ PROGRAMMING GUIDELINES
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20251001',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1500,
         system,
         messages
@@ -71,7 +71,7 @@ PROGRAMMING GUIDELINES
       if (response.status === 429 || err.includes('credit') || err.includes('billing')) {
         return res.status(429).json({ error: 'API credits exhausted. Add billing at console.anthropic.com' });
       }
-      return res.status(502).json({ error: 'Anthropic API error', detail: err });
+      return res.status(502).json({ error: 'Anthropic API error: ' + response.status + ' — ' + err.slice(0, 200) });
     }
 
     const data = await response.json();
