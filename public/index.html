@@ -561,6 +561,11 @@ function App(){
   const[tdRng,setTdRng]=useState('all');
   const[happyRng,setHappyRng]=useState('all');
   const[funRng,setFunRng]=useState('all');
+  const[addPrCat,setAddPrCat]=useState(null);
+  const[addPrName,setAddPrName]=useState('');
+  const[addPrVal,setAddPrVal]=useState('');
+  const[addPrDate,setAddPrDate]=useState(new Date().toISOString().slice(0,10));
+  const[addPrSaving,setAddPrSaving]=useState(false);
   const[editPrId,setEditPrId]=useState(null);
   const[editPrVal,setEditPrVal]=useState('');
   const[editPrDate,setEditPrDate]=useState('');
@@ -690,6 +695,22 @@ function App(){
       setBmOpen(false);setBmName('');setBmScore('');setBmNote('');setPendingBenchmark(null);
     }catch(e){console.error(e);}
     setBmSaving(false);
+  }
+  async function addNewPr(){
+    if(!addPrName.trim()||!addPrVal.trim()||addPrSaving)return;
+    setAddPrSaving(true);
+    try{
+      const raw=addPrVal.trim();
+      let numVal;
+      if(/^\d+:\d{2}(:\d{2})?$/.test(raw)){
+        const p=raw.split(':').map(Number);
+        numVal=p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1];
+      } else numVal=parseFloat(raw)||0;
+      await sbPost('prs',[{category:addPrCat,name:addPrName.trim(),pr_value:numVal,pr_display:raw,date:addPrDate,history:[{d:addPrDate,v:numVal}]}]);
+      const updated=await sbGet('prs','order=category,name');setPrs(updated);
+      setAddPrCat(null);setAddPrName('');setAddPrVal('');
+    }catch(e){console.error(e);}
+    setAddPrSaving(false);
   }
   function openAddBenchmark(name='',score='',date=''){
     setBmName(name);setBmScore(score);setBmDate(date||new Date().toISOString().slice(0,10));setBmNote('');setBmOpen(true);
@@ -1088,16 +1109,47 @@ function App(){
         <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setBmOpen(false)}>Cancel</button>
       </div>
     </div>`;
+    function AddPrForm({cat}){
+      return html`<div style="background:#F5F2EE;border:1px solid #DDD7CE;border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:140px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Movement / Event</label>
+            <input class="inp" placeholder=${cat==='lift'?'e.g. Strict Press':cat==='gymnastics'?'e.g. Ring Muscle-Up':'e.g. 400m Run'} value=${addPrName} onInput=${e=>setAddPrName(e.target.value)}/></div>
+          <div style="flex:0 0 100px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">${cat==='lift'?'Weight (lbs)':cat==='gymnastics'?'Reps':'Score'}</label>
+            <input class="inp" placeholder=${cat==='lift'?'225':cat==='gymnastics'?'15':'5:30'} value=${addPrVal} onInput=${e=>setAddPrVal(e.target.value)}/></div>
+          <div style="flex:0 0 140px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Date</label>
+            <input type="date" class="inp" value=${addPrDate} onInput=${e=>setAddPrDate(e.target.value)}/></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn" style="padding:7px 14px" onClick=${addNewPr} disabled=${addPrSaving||!addPrName.trim()||!addPrVal.trim()}>${addPrSaving?html`<span class="spin" style="width:12px;height:12px;border-width:2px;vertical-align:middle"></span>`:'Add'}</button>
+            <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setAddPrCat(null)}>Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    }
     return html`<div>
-      <div class="card"><div class="ct">Lifting PRs</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px">
+          <span class="ct" style="margin:0;border:none;padding:0">Lifting PRs</span>
+          <button class="rn" style="font-size:10px" onClick=${()=>setAddPrCat(addPrCat==='lift'?null:'lift')}>+ Add PR</button>
+        </div>
+        ${addPrCat==='lift'&&AddPrForm({cat:'lift'})}
         <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th></th></tr></thead>
         <tbody>${lifts.map(l=>html`<${PrRow} pr=${l} unit="lbs"/>`)}</tbody></table>
       </div>
-      <div class="card"><div class="ct">Gymnastics PRs</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px">
+          <span class="ct" style="margin:0;border:none;padding:0">Gymnastics PRs</span>
+          <button class="rn" style="font-size:10px" onClick=${()=>setAddPrCat(addPrCat==='gymnastics'?null:'gymnastics')}>+ Add PR</button>
+        </div>
+        ${addPrCat==='gymnastics'&&AddPrForm({cat:'gymnastics'})}
         <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th></th></tr></thead>
         <tbody>${gymPrs.map(l=>html`<${PrRow} pr=${l} unit="reps"/>`)}</tbody></table>
       </div>
-      <div class="card"><div class="ct">Cardio PRs</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px">
+          <span class="ct" style="margin:0;border:none;padding:0">Cardio PRs</span>
+          <button class="rn" style="font-size:10px" onClick=${()=>setAddPrCat(addPrCat==='cardio'?null:'cardio')}>+ Add PR</button>
+        </div>
+        ${addPrCat==='cardio'&&AddPrForm({cat:'cardio'})}
         <table><thead><tr><th>Event</th><th>PR</th><th>Date</th><th></th></tr></thead>
         <tbody>${cardioPrs.map(c=>html`<${PrRow} pr=${c} unit=""/>`)}</tbody></table>
       </div>
