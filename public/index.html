@@ -561,6 +561,17 @@ function App(){
   const[tdRng,setTdRng]=useState('all');
   const[happyRng,setHappyRng]=useState('all');
   const[funRng,setFunRng]=useState('all');
+  const[editPrId,setEditPrId]=useState(null);
+  const[editPrVal,setEditPrVal]=useState('');
+  const[editPrDate,setEditPrDate]=useState('');
+  const[editPrSaving,setEditPrSaving]=useState(false);
+  const[pendingBenchmark,setPendingBenchmark]=useState(null);
+  const[bmOpen,setBmOpen]=useState(false);
+  const[bmName,setBmName]=useState('');
+  const[bmScore,setBmScore]=useState('');
+  const[bmDate,setBmDate]=useState(new Date().toISOString().slice(0,10));
+  const[bmNote,setBmNote]=useState('');
+  const[bmSaving,setBmSaving]=useState(false);
   const[genComponents,setGenComponents]=useState({strength:true,metcon:true,accessory:false});
   const[genContext,setGenContext]=useState('');
   const[genMessages,setGenMessages]=useState([]);
@@ -627,6 +638,63 @@ function App(){
   },[volAgg,mvSort]);
 
   // Submit
+  // ══════ PR + BENCHMARK HELPERS ══════
+  const BENCHMARK_NAMES=['Fran','Grace','Helen','Kelly','Diane','Elizabeth','Angie','Barbara','Cindy','Annie','Isabel','Nancy','Karen','Jackie','Linda','Mary','Amanda','Eva','DT','Chelsea','Fight Gone Bad','Nasty Girls','Filthy Fifty','Murph'];
+  function detectBenchmark(text,blocks){
+    const t=(text||'').toLowerCase();
+    for(const nm of BENCHMARK_NAMES){
+      if(new RegExp('\\b'+nm.toLowerCase()+'\\b').test(t)){
+        const metcon=(blocks||[]).find(b=>b.k==='metcon');
+        return{name:nm,score:metcon?.score||''};
+      }
+    }
+    return null;
+  }
+  async function updatePr(pr){
+    if(!editPrVal.trim()||editPrSaving)return;
+    setEditPrSaving(true);
+    try{
+      const raw=editPrVal.trim();
+      // Parse value: time string (m:ss or h:mm:ss) → seconds, otherwise float
+      let newVal;
+      if(/^\d+:\d{2}(:\d{2})?$/.test(raw)){
+        const p=raw.split(':').map(Number);
+        newVal=p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1];
+      } else newVal=parseFloat(raw)||0;
+      if(!newVal){setEditPrSaving(false);return;}
+      const isImprovement=pr.category==='cardio'&&pr.pr_display&&/:\d{2}/.test(pr.pr_display)
+        ?newVal<pr.pr_value   // lower time = better
+        :newVal>pr.pr_value;  // higher = better for lifts/gymnastics/calories
+      const hist=[...(pr.history||[]),{d:editPrDate,v:newVal}];
+      const patch=isImprovement
+        ?{pr_value:newVal,pr_display:raw,date:editPrDate,history:hist}
+        :{history:hist};
+      await fetch(SB_URL+'/rest/v1/prs?id=eq.'+pr.id,{method:'PATCH',headers:sbH(),body:JSON.stringify(patch)});
+      const updated=await sbGet('prs','order=category,name');setPrs(updated);setEditPrId(null);
+    }catch(e){console.error(e);}
+    setEditPrSaving(false);
+  }
+  async function saveBenchmarkScore(){
+    if(!bmName.trim()||!bmScore.trim()||bmSaving)return;
+    setBmSaving(true);
+    try{
+      const existing=bench.find(b=>b.name.toLowerCase()===bmName.trim().toLowerCase());
+      const newScore={d:bmDate,v:bmScore.trim(),note:bmNote.trim()};
+      if(existing){
+        const scores=[...(existing.scores||[]),newScore].sort((a,b)=>a.d.localeCompare(b.d));
+        await fetch(SB_URL+'/rest/v1/benchmarks?id=eq.'+existing.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({scores})});
+      } else {
+        await sbPost('benchmarks',[{name:bmName.trim(),scores:[newScore],notes:''}]);
+      }
+      const updated=await sbGet('benchmarks','order=name');setBench(updated);
+      setBmOpen(false);setBmName('');setBmScore('');setBmNote('');setPendingBenchmark(null);
+    }catch(e){console.error(e);}
+    setBmSaving(false);
+  }
+  function openAddBenchmark(name='',score='',date=''){
+    setBmName(name);setBmScore(score);setBmDate(date||new Date().toISOString().slice(0,10));setBmNote('');setBmOpen(true);
+  }
+
   // ══════ WORKOUT GENERATOR HELPERS ══════
   function buildAthleteData(){
     const today=new Date().toISOString().slice(0,10);
@@ -694,7 +762,10 @@ function App(){
       const parsed=await r.json();
       await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}]);
       const updated=await sbGet('sessions','order=date.desc');
-      setSess(updated);setPOk('Saved '+fd(inDate));setInText('');setInHappy('');setInFun('');setExp(inDate);
+      setSess(updated);setPOk('Saved '+fd(inDate));
+      const bm=detectBenchmark(inText,parsed.blocks||[]);
+      if(bm)setPendingBenchmark({...bm,date:inDate});
+      setInText('');setInHappy('');setInFun('');setExp(inDate);
       setTimeout(()=>setPOk(''),5000);
     }catch(e){setPErr(e.message);}finally{setParsing(false);}
   }
@@ -823,6 +894,14 @@ function App(){
         </button></div>
         ${pErr&&html`<div class="err" style="margin-top:8px">${pErr}</div>`}
         ${pOk&&html`<div class="ok">${pOk}</div>`}
+        ${pendingBenchmark&&html`<div style="margin-top:12px;padding:12px 14px;background:#FBF1E3;border:1px solid #C07D3A;border-radius:7px">
+          <div style="font-size:11px;font-weight:700;color:#B5651D;margin-bottom:4px">Benchmark detected: ${pendingBenchmark.name}</div>
+          <div style="font-size:11px;color:#7A7168;margin-bottom:8px">Score: ${pendingBenchmark.score||'(no score)'} · ${fd(pendingBenchmark.date)}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" style="padding:6px 14px;font-size:11px" onClick=${()=>openAddBenchmark(pendingBenchmark.name,pendingBenchmark.score,pendingBenchmark.date)}>Save to Benchmarks</button>
+            <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setPendingBenchmark(null)}>Dismiss</button>
+          </div>
+        </div>`}
       </div>
       <div class="card"><div class="ct">Session History</div>
         ${sess.length===0?html`<div class="mut" style="padding:12px 0">No sessions yet.</div>`:
@@ -974,23 +1053,65 @@ function App(){
   }
 
   // ══════ PRS TAB ══════
+  function PrRow({pr,unit}){
+    const editing=editPrId===pr.id;
+    return html`<tr>
+      <td>${pr.name}</td>
+      <td class="prv">${pr.pr_display||pr.pr_value} ${unit}</td>
+      <td class="mut">${fd(pr.date)}</td>
+      <td style="text-align:right">
+        ${!editing&&html`<button style="background:transparent;color:#2E3F5C;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{setEditPrId(pr.id);setEditPrVal('');setEditPrDate(new Date().toISOString().slice(0,10));}}>Update</button>`}
+        ${editing&&html`<div style="display:flex;gap:4px;align-items:center;justify-content:flex-end">
+          <input class="inp" style="width:80px;padding:4px 6px;font-size:11px" placeholder=${pr.pr_display||pr.pr_value} value=${editPrVal} onInput=${e=>setEditPrVal(e.target.value)}/>
+          <input type="date" class="inp" style="width:120px;padding:4px 6px;font-size:11px" value=${editPrDate} onInput=${e=>setEditPrDate(e.target.value)}/>
+          <button class="btn" style="padding:4px 10px;font-size:10px" onClick=${()=>updatePr(pr)} disabled=${editPrSaving}>${editPrSaving?html`<span class="spin" style="width:10px;height:10px;border-width:2px;vertical-align:middle"></span>`:'Save'}</button>
+          <button style="background:transparent;color:#7A7168;border:none;font-size:10px;cursor:pointer;font-family:inherit" onClick=${()=>setEditPrId(null)}>✕</button>
+        </div>`}
+      </td>
+    </tr>`;
+  }
   function PrTab(){
+    const BmForm=()=>html`<div style="background:#F5F2EE;border:1px solid #DDD7CE;border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">${bench.find(b=>b.name.toLowerCase()===bmName.toLowerCase())?'Add Score — '+bmName:'New Benchmark'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <div style="flex:1;min-width:140px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Benchmark Name</label>
+          <input class="inp" placeholder="e.g. Kelly, Fran, DT..." value=${bmName} onInput=${e=>setBmName(e.target.value)}/></div>
+        <div style="flex:0 0 100px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Score</label>
+          <input class="inp" placeholder="e.g. 28:59" value=${bmScore} onInput=${e=>setBmScore(e.target.value)}/></div>
+        <div style="flex:0 0 140px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Date</label>
+          <input type="date" class="inp" value=${bmDate} onInput=${e=>setBmDate(e.target.value)}/></div>
+      </div>
+      <div style="margin-bottom:10px"><label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Notes (optional)</label>
+        <input class="inp" placeholder="e.g. unpartitioned, felt strong..." value=${bmNote} onInput=${e=>setBmNote(e.target.value)}/></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onClick=${saveBenchmarkScore} disabled=${bmSaving||!bmName.trim()||!bmScore.trim()}>${bmSaving?html`<span class="spin" style="width:12px;height:12px;border-width:2px;vertical-align:middle;margin-right:4px"></span>Saving...`:'Save'}</button>
+        <button style="background:transparent;color:#7A7168;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setBmOpen(false)}>Cancel</button>
+      </div>
+    </div>`;
     return html`<div>
       <div class="card"><div class="ct">Lifting PRs</div>
-        <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th></tr></thead>
-        <tbody>${lifts.map(l=>html`<tr><td>${l.name}</td><td class="prv">${l.pr_value} lbs</td><td class="mut">${fd(l.date)}</td></tr>`)}</tbody></table>
+        <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th></th></tr></thead>
+        <tbody>${lifts.map(l=>html`<${PrRow} pr=${l} unit="lbs"/>`)}</tbody></table>
       </div>
       <div class="card"><div class="ct">Gymnastics PRs</div>
-        <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th></tr></thead>
-        <tbody>${gymPrs.map(l=>html`<tr><td>${l.name}</td><td class="prv">${l.pr_value} reps</td><td class="mut">${fd(l.date)}</td></tr>`)}</tbody></table>
+        <table><thead><tr><th>Movement</th><th>PR</th><th>Date</th><th></th></tr></thead>
+        <tbody>${gymPrs.map(l=>html`<${PrRow} pr=${l} unit="reps"/>`)}</tbody></table>
       </div>
       <div class="card"><div class="ct">Cardio PRs</div>
-        <table><thead><tr><th>Event</th><th>PR</th><th>Date</th></tr></thead>
-        <tbody>${cardioPrs.map(c=>html`<tr><td>${c.name}</td><td class="prv">${c.pr_display||c.pr_value}</td><td class="mut">${fd(c.date)}</td></tr>`)}</tbody></table>
+        <table><thead><tr><th>Event</th><th>PR</th><th>Date</th><th></th></tr></thead>
+        <tbody>${cardioPrs.map(c=>html`<${PrRow} pr=${c} unit=""/>`)}</tbody></table>
       </div>
-      <div class="card"><div class="ct">Benchmark WODs</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E8EDF5;padding-bottom:8px">
+          <span class="ct" style="margin:0;border:none;padding:0">Benchmark WODs</span>
+          <button class="rn" style="font-size:10px" onClick=${()=>openAddBenchmark()}>+ Add Benchmark</button>
+        </div>
+        ${bmOpen&&BmForm()}
         ${bench.map(b=>html`<div style="margin-bottom:16px">
-          <div style="font-weight:700;font-size:12px;color:#2E3F5C;margin-bottom:6px">${b.name}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-weight:700;font-size:12px;color:#2E3F5C">${b.name}</span>
+            <button style="background:transparent;color:#2E3F5C;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>openAddBenchmark(b.name,'')}>+ Add Score</button>
+          </div>
           <table><thead><tr><th>Date</th><th>Score</th><th>Notes</th></tr></thead>
           <tbody>${(b.scores||[]).map(s=>html`<tr>
             <td class="mut">${fd(s.d)}</td>
