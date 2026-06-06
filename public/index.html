@@ -561,6 +561,13 @@ function App(){
   const[tdRng,setTdRng]=useState('all');
   const[happyRng,setHappyRng]=useState('all');
   const[funRng,setFunRng]=useState('all');
+  const[genComponents,setGenComponents]=useState({strength:true,metcon:true,accessory:false});
+  const[genContext,setGenContext]=useState('');
+  const[genMessages,setGenMessages]=useState([]);
+  const[genLoading,setGenLoading]=useState(false);
+  const[genError,setGenError]=useState('');
+  const[genInput,setGenInput]=useState('');
+  const[genAthleteData,setGenAthleteData]=useState(null);
   const[impRows,setImpRows]=useState([]);
   const[impSkip,setImpSkip]=useState([]);
   const[impDone,setImpDone]=useState(0);
@@ -620,6 +627,59 @@ function App(){
   },[volAgg,mvSort]);
 
   // Submit
+  // ══════ WORKOUT GENERATOR HELPERS ══════
+  function buildAthleteData(){
+    const today=new Date().toISOString().slice(0,10);
+    const cut=new Date();cut.setDate(cut.getDate()-14);const cutStr=cut.toISOString().slice(0,10);
+    const recent=sess.filter(s=>s.date>=cutStr).sort((a,b)=>b.date.localeCompare(a.date));
+    const recentSessions=recent.length===0?'No sessions in last 14 days':recent.map(s=>{
+      const parts=(s.blocks||[]).map(b=>{
+        if(b.k==='strength')return'STR: '+(b.mov||'Unknown');
+        if(b.k==='metcon'){const mvs=(b.pm||[]).slice(0,5).map(p=>normMov(p.n)||p.n).join(', ');return'MET: '+(b.fmt||'Metcon')+' ('+mvs+') | '+(b.td||'?')+' domain | score: '+(b.score||'?');}
+        if(b.k==='accessory')return'ACC: '+(b.mov||'Unknown');
+        return'';
+      }).filter(Boolean).join(' | ');
+      return fd(s.date)+': '+(parts||'Session');
+    }).join('\n');
+    const allAgg=agg(sess,'2000-01-01',today);
+    const q90=calPeriod('quarter',0);const tdAgg=agg(sess,q90.start,q90.end);
+    const patternBalance=PK.map(k=>{
+      const f=allAgg.pF[k]||0;const t=allAgg.pT[k]||0;
+      return PATS[k].l+': '+f+' sessions, '+(t>0?Math.round(t/1000)+'k lbs tonnage':'-');
+    }).join('\n');
+    const timeDomain='Short (<7min): '+tdAgg.td.short+' | Medium (7-20min): '+tdAgg.td.med+' | Long (20min+): '+tdAgg.td.long;
+    const mvList=Object.entries(allAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.freq-a.freq).slice(0,20);
+    const topMovements=mvList.map(m=>{const avg=m.ton>0&&m.reps>0?', avg '+Math.round(m.ton/m.reps)+' lbs':'';return m.n+': '+m.freq+' sessions'+avg;}).join('\n');
+    const prStr=prs.filter(p=>p.category==='lift').map(p=>p.name+': '+p.pr_value+' lbs').join(', ')||'None logged';
+    const moodSatisfied=allAgg.mood.hTotal>0?Math.round(allAgg.mood.happy/allAgg.mood.hTotal*100)+'%':'N/A';
+    const moodFun=allAgg.mood.fTotal>0?Math.round(allAgg.mood.fun/allAgg.mood.fTotal*100)+'%':'N/A';
+    return{recentSessions,patternBalance,timeDomain,topMovements,prs:prStr,moodSatisfied,moodFun};
+  }
+  async function generate(){
+    if(genLoading||!Object.values(genComponents).some(Boolean))return;
+    setGenLoading(true);setGenError('');setGenMessages([]);
+    const athleteData=buildAthleteData();
+    setGenAthleteData(athleteData);
+    const msgs=[{role:'user',content:'Please generate my workout.'}];
+    try{
+      const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({components:genComponents,context:genContext,messages:msgs,athleteData})});
+      if(!r.ok){const e=await r.json();throw new Error(e.error||'Generation failed');}
+      const d=await r.json();
+      setGenMessages([...msgs,{role:'assistant',content:d.content}]);
+    }catch(e){setGenError(e.message);}finally{setGenLoading(false);}
+  }
+  async function sendFollowUp(){
+    if(!genInput.trim()||genLoading)return;
+    const newMsgs=[...genMessages,{role:'user',content:genInput}];
+    setGenMessages(newMsgs);setGenInput('');setGenLoading(true);setGenError('');
+    try{
+      const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({components:genComponents,context:genContext,messages:newMsgs,athleteData:genAthleteData})});
+      if(!r.ok){const e=await r.json();throw new Error(e.error||'Generation failed');}
+      const d=await r.json();
+      setGenMessages([...newMsgs,{role:'assistant',content:d.content}]);
+    }catch(e){setGenError(e.message);}finally{setGenLoading(false);}
+  }
+
   async function submit(){
     if(!inText.trim()||parsing)return;
     setParsing(true);setPErr('');setPOk('');
@@ -937,6 +997,61 @@ function App(){
     </div>`;
   }
 
+  // ══════ GENERATE TAB ══════
+  function GenerateTab(){
+    const hasGenerated=genMessages.some(m=>m.role==='assistant');
+    const displayMsgs=genMessages.filter((_,i)=>i>0); // skip hidden trigger message
+    return html`<div>
+      <div class="card">
+        <div class="ct">Workout Generator</div>
+        ${!hasGenerated&&html`<div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:8px">Components</div>
+            <div style="display:flex;gap:8px">
+              ${[['strength','Strength'],['metcon','Metcon'],['accessory','Accessory']].map(([k,l])=>html`
+                <button class="rn ${genComponents[k]?'act':''}" onClick=${()=>setGenComponents(p=>({...p,[k]:!p[k]}))}>
+                  ${genComponents[k]?'✓ ':''} ${l}
+                </button>`)}
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:9px;color:#7A7168;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:5px">Notes for today (optional)</label>
+            <input class="inp" placeholder="e.g. sore from deadlifts, only 30 minutes, just want something fun..." value=${genContext} onInput=${e=>setGenContext(e.target.value)} onKeyDown=${e=>e.key==='Enter'&&generate()}/>
+          </div>
+          ${genError&&html`<div class="err" style="margin-bottom:10px">${genError}</div>`}
+          <button class="btn" onClick=${generate} disabled=${genLoading||!Object.values(genComponents).some(Boolean)}>
+            ${genLoading?html`<span class="spin" style="width:14px;height:14px;border-width:2px;vertical-align:middle;margin-right:6px"></span> Generating...`:'Generate Workout'}
+          </button>
+        </div>`}
+        ${hasGenerated&&html`<div>
+          ${displayMsgs.map((m,i)=>html`<div key=${i} style=${{
+            background: m.role==='assistant'?'#F5F2EE':'#E8EDF5',
+            borderRadius:'8px',padding:m.role==='assistant'?'18px 16px':'10px 14px',
+            marginBottom:'10px',
+            fontFamily:'inherit',
+            whiteSpace:'pre-wrap',
+            fontSize:'12px',
+            lineHeight:'1.75',
+            color:'#2C2A27',
+            borderLeft:m.role==='assistant'?'3px solid #2E3F5C':'3px solid #9BAABF'
+          }}>
+            ${m.role==='user'&&html`<div style="font-size:9px;font-weight:700;color:#9BAABF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">You</div>`}
+            ${m.content}
+          </div>`)}
+          ${genLoading&&html`<div style="display:flex;align-items:center;gap:8px;padding:12px;color:#7A7168;font-size:12px"><div class="spin"></div> Thinking...</div>`}
+          ${genError&&html`<div class="err" style="margin-bottom:10px">${genError}</div>`}
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input class="inp" style="flex:1" placeholder="Ask a question, request changes, ask for reasoning..." value=${genInput} onInput=${e=>setGenInput(e.target.value)} onKeyDown=${e=>e.key==='Enter'&&sendFollowUp()} disabled=${genLoading}/>
+            <button class="btn" onClick=${sendFollowUp} disabled=${genLoading||!genInput.trim()}>Send</button>
+          </div>
+          <div style="margin-top:10px">
+            <button style="background:transparent;color:#7A7168;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{setGenMessages([]);setGenContext('');setGenInput('');setGenError('');setGenAthleteData(null);}}>← New Workout</button>
+          </div>
+        </div>`}
+      </div>
+    </div>`;
+  }
+
   // ══════ IMPORT TAB ══════
   function ImportTab(){
     function handleFile(e){
@@ -1055,7 +1170,7 @@ function App(){
     </div>`;
   }
 
-  const tabs=['Dashboard','Workout Log','Volume','PRs','Import'];
+  const tabs=['Dashboard','Workout Log','Volume','PRs','Generate','Import'];
 
   return html`<div>
     <div class="hdr"><div class="logo">⚡</div><div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div></div>
@@ -1065,6 +1180,7 @@ function App(){
       ${tab==='Workout Log'&&LogTab()}
       ${tab==='Volume'&&VolTab()}
       ${tab==='PRs'&&PrTab()}
+      ${tab==='Generate'&&GenerateTab()}
       ${tab==='Import'&&ImportTab()}
     </div>
   </div>`;
