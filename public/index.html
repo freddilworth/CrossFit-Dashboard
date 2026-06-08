@@ -837,7 +837,7 @@ function App(){
 
     // Last 7 days
     const last7=[];
-    for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=d.toISOString().slice(0,10);last7.push({date:ds,session:sess.find(x=>x.date===ds)||null});}
+    for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=d.toISOString().slice(0,10);last7.push({date:ds,session:sess.find(x=>x.date===ds)||null});}
     const tdLabel={short:'Short',med:'Med',long:'Long'};
     const tdColor={short:'#C0392B',med:'#2E86C1',long:'#27AE60'};
     function moodDot(val,type){
