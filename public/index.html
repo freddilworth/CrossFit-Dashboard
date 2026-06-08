@@ -298,6 +298,8 @@ const MK=Object.keys(MODS);
 // ══════ HELPERS ══════
 function fd(d){if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function fds(d){if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function sessPatterns(s){const p=new Set();for(const b of(s.blocks||[])){if(b.k==='strength'||b.k==='accessory')clsAllCached(b.mov).forEach(c=>{if(c.pat)p.add(c.pat);});if(b.k==='metcon')for(const pm of(b.pm||[]))clsAllCached(pm.n).forEach(c=>{if(c.pat)p.add(c.pat);});}return[...p];}
+function sessTd(s){for(const b of(s.blocks||[]))if(b.k==='metcon'&&b.td)return b.td;return null;}
 
 function calPeriod(type,offset=0){
   const now=new Date();const today=now.toISOString().slice(0,10);let s;
@@ -594,6 +596,8 @@ function App(){
   const[modRng,setModRng]=useState('all');
   const[patRng,setPatRng]=useState('all');
   const[subRng,setSubRng]=useState('all');
+  const[planeRng,setPlaneRng]=useState('all');
+  const[expandDay,setExpandDay]=useState(null);
 
   useEffect(()=>{let c=false;(async()=>{
     await sbInit();
@@ -810,6 +814,7 @@ function App(){
   const modAgg=useMemo(()=>agg(sess,calPeriod(modRng,0).start,calPeriod(modRng,0).end),[sess,modRng]);
   const patAgg=useMemo(()=>agg(sess,calPeriod(patRng,0).start,calPeriod(patRng,0).end),[sess,patRng]);
   const subAgg=useMemo(()=>agg(sess,calPeriod(subRng,0).start,calPeriod(subRng,0).end),[sess,subRng]);
+  const planeAgg=useMemo(()=>agg(sess,calPeriod(planeRng,0).start,calPeriod(planeRng,0).end),[sess,planeRng]);
 
   // ══════ DASHBOARD TAB ══════
   function DashTab(){
@@ -818,67 +823,103 @@ function App(){
     const happyRate=hm.hTotal?Math.round(hm.happy/hm.hTotal*100):null;
     const funRate=fm.fTotal?Math.round(fm.fun/fm.fTotal*100):null;
 
-    const tdD=[{label:'Short (<10m)',val:tdAgg.td.short,color:'#C0392B'},{label:'Medium (10-20m)',val:tdAgg.td.med,color:'#2E86C1'},{label:'Long (20m+)',val:tdAgg.td.long,color:'#2E3F5C'}];
-    const modD=MK.map(k=>({label:MODS[k].l,val:modAgg.mF[k]||0,color:MODS[k].c}));
-    const patD=PK.map(k=>({label:PATS[k].l,val:patAgg.pF[k]||0,color:PATS[k].c}));
-    const vpush=(subAgg.sF.push_vertical||0);const hpush=(subAgg.sF.push_horizontal||0);
-    const vpull=(subAgg.sF.pull_vertical||0);const hpull=(subAgg.sF.pull_horizontal||0);
-    const trad=(subAgg.sF.squat_traditional||0);const sleg=(subAgg.sF.squat_single_leg||0);
+    // Plane balance ratios
+    const vpush=planeAgg.sF.push_vertical||0;const vpull=planeAgg.sF.pull_vertical||0;
+    const hpush=planeAgg.sF.push_horizontal||0;const hpull=planeAgg.sF.pull_horizontal||0;
+    const vpRatio=vpull>0?(vpush/vpull).toFixed(1):(vpush>0?'∞':'—');
+    const hpRatio=hpull>0?(hpush/hpull).toFixed(1):(hpush>0?'∞':'—');
+    const ratioColor=r=>r==='—'?'#B0A89E':r==='∞'?'#B03A2E':parseFloat(r)<=1.5?'#2D6A4F':parseFloat(r)<=3?'#C07D3A':'#B03A2E';
+
+    // Sub-category
+    const vpushS=subAgg.sF.push_vertical||0;const hpushS=subAgg.sF.push_horizontal||0;
+    const vpullS=subAgg.sF.pull_vertical||0;const hpullS=subAgg.sF.pull_horizontal||0;
+    const trad=subAgg.sF.squat_traditional||0;const sleg=subAgg.sF.squat_single_leg||0;
+
+    // Last 7 days
+    const last7=[];
+    for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=d.toISOString().slice(0,10);last7.push({date:ds,session:sess.find(x=>x.date===ds)||null});}
+    const tdLabel={short:'Short',med:'Med',long:'Long'};
+    const tdColor={short:'#C0392B',med:'#2E86C1',long:'#27AE60'};
+    function moodDot(val,type){
+      const good=type==='h'?val==='happy':val==='fun';
+      const bad=type==='h'?val==='unhappy':val==='notfun';
+      const c=!val?'#DDD7CE':good?'#2D6A4F':bad?'#B03A2E':'#C07D3A';
+      return html`<div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></div>`;
+    }
 
     return html`<div>
       <div class="g4" style="margin-bottom:14px">
         <div class="streak ${sc}">
           <div style="font-size:28px;font-weight:700">${streak}</div>
           <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;font-weight:600">Consecutive Days</div>
-        </div>
-        <div class="ratio-card">
-          <div style="font-size:14px;font-weight:600;color:#7A7168;margin-bottom:4px">Last Rest Day</div>
-          <div style="font-size:22px;font-weight:700;color:#2E3F5C">${restDaysAgo}d ago</div>
-          <div class="mut">${fd(restDay)}</div>
+          ${restDay&&html`<div style="font-size:10px;margin-top:6px;opacity:.8">Last rest: ${restDaysAgo}d ago · ${fds(restDay)}</div>`}
         </div>
         <div class="ratio-card" style="padding:10px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-            <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase">Performance Satisfaction</div>
-          </div>
+          <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Performance Satisfaction</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${happyRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setHappyRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="color:${happyRate===null?'#B0A89E':happyRate>=60?'#2D6A4F':happyRate>=40?'#C07D3A':'#B03A2E'}">${happyRate===null?'—':happyRate+'%'}</div>
           <div class="ratio-lbl">Satisfied</div>
           ${hm.hTotal>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:4px">${hm.happy}✓ ${hm.neutralH}— ${hm.unhappy}✗ of ${hm.hTotal}</div>`}
         </div>
         <div class="ratio-card" style="padding:10px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-            <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase">Enjoyment</div>
-          </div>
+          <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Enjoyment</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${funRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setFunRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="color:${funRate===null?'#B0A89E':funRate>=60?'#2D6A4F':funRate>=40?'#C07D3A':'#B03A2E'}">${funRate===null?'—':funRate+'%'}</div>
           <div class="ratio-lbl">Had Fun</div>
           ${fm.fTotal>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:4px">${fm.fun}✓ ${fm.neutralF}— ${fm.notfun}✗ of ${fm.fTotal}</div>`}
         </div>
-      </div>
-      <div class="g2">
-        <div class="card">
-          ${CardHead({title:'Time Domain Balance',rng:tdRng,setRng:setTdRng})}
-          <${Donut} data=${tdD}/>
-        </div>
-        <div class="card">
-          ${CardHead({title:'Modality Balance',rng:modRng,setRng:setModRng})}
-          <${Donut} data=${modD}/>
-        </div>
-      </div>
-      <div class="g2">
-        <div class="card">
-          ${CardHead({title:'Pattern Balance',rng:patRng,setRng:setPatRng})}
-          <${Donut} data=${patD}/>
-        </div>
-        <div class="card">
-          ${CardHead({title:'Pattern Sub-Category Detail',rng:subRng,setRng:setSubRng})}
-          <div style="font-size:12px;line-height:2">
-            <div><b>Push:</b> Vertical ${vpush} / Horizontal ${hpush}</div>
-            <div><b>Pull:</b> Vertical ${vpull} / Horizontal ${hpull}</div>
-            <div><b>Squat:</b> Traditional ${trad} / Single-Leg ${sleg}</div>
-            <div><b>Monostructural:</b> Bounding ${subAgg.sF.mono_bounding||0} / Machines ${subAgg.sF.mono_machines||0}</div>
-            <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
+        <div class="ratio-card" style="padding:10px">
+          <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Plane Balance</div>
+          <div style="display:flex;gap:2px;margin-bottom:8px">${RNGS.map(([k,l])=>html`<button class="rn ${planeRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setPlaneRng(k)}>${l}</button>`)}</div>
+          <div style="font-size:11px;line-height:2.2">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="color:#7A7168">Vert Push:Pull</span>
+              <span style="font-weight:700;font-size:13px;color:${ratioColor(vpRatio)}">${vpRatio}:1</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="color:#7A7168">Horiz Push:Pull</span>
+              <span style="font-weight:700;font-size:13px;color:${ratioColor(hpRatio)}">${hpRatio}:1</span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct">Last 7 Days</div>
+        ${last7.map(({date,session:s})=>{
+          const isOpen=expandDay===date;
+          if(!s)return html`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #DDD7CE">
+            <span style="width:72px;flex-shrink:0;font-size:12px;color:#B0A89E">${fds(date)}</span>
+            <span style="font-size:11px;color:#B0A89E;font-style:italic">Rest</span>
+          </div>`;
+          const pats=sessPatterns(s);const td=sessTd(s);
+          return html`<div>
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid ${isOpen?'transparent':'#DDD7CE'};cursor:pointer" onClick=${()=>setExpandDay(isOpen?null:date)}>
+              <span style="width:72px;flex-shrink:0;font-size:12px;font-weight:700;color:#2E3F5C">${fds(date)}</span>
+              ${td&&html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${tdColor[td]+'22'};color:${tdColor[td]}">${tdLabel[td]}</span>`}
+              <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">
+                ${pats.map(p=>html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${(PATS[p]?.c||'#ccc')+'22'};color:${PATS[p]?.c||'#ccc'}">${PATS[p]?.l||p}</span>`)}
+              </div>
+              <div style="display:flex;gap:4px;align-items:center">
+                ${moodDot(s.happiness,'h')}${moodDot(s.fun,'f')}
+                <span style="color:#B0A89E;font-size:10px;margin-left:2px">${isOpen?'▲':'▼'}</span>
+              </div>
+            </div>
+            ${isOpen&&html`<div style="padding:8px 0 4px;border-bottom:1px solid #DDD7CE">
+              ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
+            </div>`}
+          </div>`;
+        })}
+      </div>
+
+      <div class="card">
+        ${CardHead({title:'Pattern Sub-Category Detail',rng:subRng,setRng:setSubRng})}
+        <div style="font-size:12px;line-height:2">
+          <div><b>Push:</b> Vertical ${vpushS} / Horizontal ${hpushS}</div>
+          <div><b>Pull:</b> Vertical ${vpullS} / Horizontal ${hpullS}</div>
+          <div><b>Squat:</b> Traditional ${trad} / Single-Leg ${sleg}</div>
+          <div><b>Monostructural:</b> Bounding ${subAgg.sF.mono_bounding||0} / Machines ${subAgg.sF.mono_machines||0}</div>
+          <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
         </div>
       </div>
     </div>`;
