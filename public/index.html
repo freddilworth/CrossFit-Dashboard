@@ -1348,17 +1348,17 @@ function App(){
     </div>`;
   }
 
-  const tabs=['Dashboard','Workout Log','Volume','PRs','Generate','Import'];
+  const tabs=['Dashboard','Sessions','Analytics','PRs','Create Session','Import'];
 
   return html`<div>
     <div class="hdr"><div class="logo">⚡</div><div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
     <div class="bod">
       ${tab==='Dashboard'&&DashTab()}
-      ${tab==='Workout Log'&&LogTab()}
-      ${tab==='Volume'&&VolTab()}
+      ${tab==='Sessions'&&LogTab()}
+      ${tab==='Analytics'&&VolTab()}
       ${tab==='PRs'&&PrTab()}
-      ${tab==='Generate'&&GenerateTab()}
+      ${tab==='Create Session'&&GenerateTab()}
       ${tab==='Import'&&ImportTab()}
     </div>
   </div>`;
