@@ -56,7 +56,7 @@ DB Hang Snatch = pat:hinge, mod:weightlifting
 SA DB Thruster = pat:squat, sub:traditional, mod:weightlifting
 
 QUANTITY RULES:
-- "td" for metcon time domain: short (<7min), med (7-20min), long (>20min)
+- "td" for metcon time domain: short (<10min), med (10-20min), long (>20min)
 - "pm" = parsed movements with TOTAL reps estimated from score
   - AMRAP: reps_per_round * completed_rounds
   - EMOM: reps * number_of_rounds_for_that_station (total_minutes / num_stations)

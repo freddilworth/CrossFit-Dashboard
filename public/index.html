@@ -741,7 +741,7 @@ function App(){
       const f=allAgg.pF[k]||0;const t=allAgg.pT[k]||0;
       return PATS[k].l+': '+f+' sessions, '+(t>0?Math.round(t/1000)+'k lbs tonnage':'-');
     }).join('\n');
-    const timeDomain='Short (<7min): '+tdAgg.td.short+' | Medium (7-20min): '+tdAgg.td.med+' | Long (20min+): '+tdAgg.td.long;
+    const timeDomain='Short (<10min): '+tdAgg.td.short+' | Medium (10-20min): '+tdAgg.td.med+' | Long (20min+): '+tdAgg.td.long;
     const mvList=Object.entries(allAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.freq-a.freq).slice(0,20);
     const topMovements=mvList.map(m=>{const avg=m.ton>0&&m.reps>0?', avg '+Math.round(m.ton/m.reps)+' lbs':'';return m.n+': '+m.freq+' sessions'+avg;}).join('\n');
     const prStr=prs.filter(p=>p.category==='lift').map(p=>p.name+': '+p.pr_value+' lbs').join(', ')||'None logged';
@@ -818,7 +818,7 @@ function App(){
     const happyRate=hm.hTotal?Math.round(hm.happy/hm.hTotal*100):null;
     const funRate=fm.fTotal?Math.round(fm.fun/fm.fTotal*100):null;
 
-    const tdD=[{label:'Short (<7m)',val:tdAgg.td.short,color:'#C0392B'},{label:'Medium (7-15m)',val:tdAgg.td.med,color:'#2E86C1'},{label:'Long (15m+)',val:tdAgg.td.long,color:'#2E3F5C'}];
+    const tdD=[{label:'Short (<10m)',val:tdAgg.td.short,color:'#C0392B'},{label:'Medium (10-20m)',val:tdAgg.td.med,color:'#2E86C1'},{label:'Long (20m+)',val:tdAgg.td.long,color:'#2E3F5C'}];
     const modD=MK.map(k=>({label:MODS[k].l,val:modAgg.mF[k]||0,color:MODS[k].c}));
     const patD=PK.map(k=>({label:PATS[k].l,val:patAgg.pF[k]||0,color:PATS[k].c}));
     const vpush=(subAgg.sF.push_vertical||0);const hpush=(subAgg.sF.push_horizontal||0);
@@ -1015,7 +1015,7 @@ function App(){
     const patTD=PK.map(k=>({label:PATS[k].l,val:volAgg.pT[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
     const modFD=MK.map(k=>({label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const modTD=MK.map(k=>({label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
-    const tdD=[{label:'Short',val:volAgg.td.short,color:'#C0392B'},{label:'Medium',val:volAgg.td.med,color:'#2E86C1'},{label:'Long',val:volAgg.td.long,color:'#2E3F5C'}];
+    const tdD=[{label:'Short (<10m)',val:volAgg.td.short,color:'#C0392B'},{label:'Medium (10-20m)',val:volAgg.td.med,color:'#2E86C1'},{label:'Long (20m+)',val:volAgg.td.long,color:'#2E3F5C'}];
     const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0);
 
     return html`<div>
