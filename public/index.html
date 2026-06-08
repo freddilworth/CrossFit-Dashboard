@@ -857,25 +857,25 @@ function App(){
         <div class="ratio-card" style="padding:10px">
           <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Performance Satisfaction</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${happyRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setHappyRng(k)}>${l}</button>`)}</div>
-          <div class="ratio-val" style="color:${happyRate===null?'#B0A89E':happyRate>=60?'#2D6A4F':happyRate>=40?'#C07D3A':'#B03A2E'}">${happyRate===null?'—':happyRate+'%'}</div>
-          <div class="ratio-lbl">Satisfied</div>
+          <div class="ratio-val" style="text-align:center;color:${happyRate===null?'#B0A89E':happyRate>=60?'#2D6A4F':happyRate>=40?'#C07D3A':'#B03A2E'}">${happyRate===null?'—':happyRate+'%'}</div>
+          <div class="ratio-lbl" style="text-align:center">Satisfied</div>
         </div>
         <div class="ratio-card" style="padding:10px">
           <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Enjoyment</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${funRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setFunRng(k)}>${l}</button>`)}</div>
-          <div class="ratio-val" style="color:${funRate===null?'#B0A89E':funRate>=60?'#2D6A4F':funRate>=40?'#C07D3A':'#B03A2E'}">${funRate===null?'—':funRate+'%'}</div>
-          <div class="ratio-lbl">Had Fun</div>
+          <div class="ratio-val" style="text-align:center;color:${funRate===null?'#B0A89E':funRate>=60?'#2D6A4F':funRate>=40?'#C07D3A':'#B03A2E'}">${funRate===null?'—':funRate+'%'}</div>
+          <div class="ratio-lbl" style="text-align:center">Had Fun</div>
         </div>
         <div class="ratio-card" style="padding:10px">
           <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Plane Balance</div>
           <div style="display:flex;gap:2px;margin-bottom:8px">${RNGS.map(([k,l])=>html`<button class="rn ${planeRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setPlaneRng(k)}>${l}</button>`)}</div>
           <div style="font-size:11px;line-height:2.2">
             <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:#7A7168">Vert Push:Pull</span>
+              <span style="color:#7A7168">Vertical Push:Pull</span>
               <span style="font-weight:700;font-size:13px;color:${ratioColor(vpRatio)}">${vpRatio}:1</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:#7A7168">Horiz Push:Pull</span>
+              <span style="color:#7A7168">Horizontal Push:Pull</span>
               <span style="font-weight:700;font-size:13px;color:${ratioColor(hpRatio)}">${hpRatio}:1</span>
             </div>
           </div>
