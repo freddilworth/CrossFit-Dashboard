@@ -859,14 +859,12 @@ function App(){
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${happyRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setHappyRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="color:${happyRate===null?'#B0A89E':happyRate>=60?'#2D6A4F':happyRate>=40?'#C07D3A':'#B03A2E'}">${happyRate===null?'—':happyRate+'%'}</div>
           <div class="ratio-lbl">Satisfied</div>
-          ${hm.hTotal>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:4px">${hm.happy}✓ ${hm.neutralH}— ${hm.unhappy}✗ of ${hm.hTotal}</div>`}
         </div>
         <div class="ratio-card" style="padding:10px">
           <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Enjoyment</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${funRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setFunRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="color:${funRate===null?'#B0A89E':funRate>=60?'#2D6A4F':funRate>=40?'#C07D3A':'#B03A2E'}">${funRate===null?'—':funRate+'%'}</div>
           <div class="ratio-lbl">Had Fun</div>
-          ${fm.fTotal>0&&html`<div style="font-size:9px;color:#7A7168;margin-top:4px">${fm.fun}✓ ${fm.neutralF}— ${fm.notfun}✗ of ${fm.fTotal}</div>`}
         </div>
         <div class="ratio-card" style="padding:10px">
           <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Plane Balance</div>
