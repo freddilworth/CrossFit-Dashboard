@@ -1080,19 +1080,19 @@ function App(){
       <div class="g2">
         <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${patFD}/>
           <div style="margin-top:8px">${PK.map(k=>{
-            const cur=volAgg.pF[k]||0;const prev=volPrevAgg.pF[k]||0;const sp=spPeriods.map(p=>p.pF[k]||0);
-            return (cur||prev)?html`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px">
+            const cur=volAgg.pF[k]||0;
+            return cur?html`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px">
               <span style="color:${PATS[k].c};font-weight:600">${PATS[k].l}</span>
-              <span><${Spark} vals=${sp}/> <${Delta} cur=${cur} prev=${prev}/></span>
+              <span style="color:#566263">${cur} sessions</span>
             </div>`:null;
           })}</div>
         </div>
         <div class="card"><div class="ct">Modality Frequency</div><${HBar} data=${modFD}/>
           <div style="margin-top:8px">${MK.map(k=>{
-            const cur=volAgg.mF[k]||0;const prev=volPrevAgg.mF[k]||0;const sp=spPeriods.map(p=>p.mF[k]||0);
-            return (cur||prev)?html`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px">
+            const cur=volAgg.mF[k]||0;
+            return cur?html`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px">
               <span style="color:${MODS[k].c};font-weight:600">${MODS[k].l}</span>
-              <span><${Spark} vals=${sp}/> <${Delta} cur=${cur} prev=${prev}/></span>
+              <span style="color:#566263">${cur} sessions</span>
             </div>`:null;
           })}</div>
         </div>
