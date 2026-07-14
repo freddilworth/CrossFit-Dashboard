@@ -89,7 +89,7 @@ function cls(nm){
   if(!n)return{pat:null,sub:null,mod:null};
   // Carries/Holds
   if(/sled/.test(n))return{pat:null,sub:null,mod:'carries'};
-  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|\bsb\s*carry\b|bear\s*hug|waiter\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
+  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|\bsb\s*carry\b|sandbag\s*hold|\bsb\s*hold\b|bear\s*hug|waiter\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
   if(/static\s*hold|dead\s*hang/.test(n))return{pat:null,sub:null,mod:'carries'};
   // Monostructural — machines
   if(/^cal\s|cal\s*row|cal\s*ski/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
@@ -235,10 +235,13 @@ function normMov(nm){
   // Core
   if(/^k2e$|knee.*elbow/.test(n))return'Knees to Elbow';
   if(/^hkr$|hanging\s*knee\s*raise/.test(n))return'Hanging Knee Raise';
+  if(/^v.?ups?$/.test(n))return'V-Up';
+  if(/^sit.?ups?$/.test(n))return'Sit-Up';
   // KB / DB movements
   if(/^kbs$|kb\s*swing|kettlebell\s*swing/.test(n))return'KB Swing';
   if(/dbl\s*kb\s*farmer|double\s*kb\s*farmer/.test(n))return"Farmer's Carry";
   if(/^sb\s*carry$|sandbag\s*carry/.test(n))return'Sandbag Carry';
+  if(/^sb\s*hold$|sandbag\s*hold/.test(n))return'Sandbag Hold';
   // Box variants
   if(/^bso$|box\s*step\s*over/.test(n))return'Box Step Over';
   if(/^bsu$|box\s*step.?up/.test(n))return'Box Step Up';
@@ -249,6 +252,7 @@ function normMov(nm){
   // Burpee variants — specific compounds first, then collapse rest to Burpee
   if(/burpee\s*bso|burpee\s*box\s*step\s*over/.test(n))return'Burpee Box Step Over';
   if(/burpee\s*(over\s*(rower|kb|bar)|to\s*target)|lateral\s*burpee|line\s*facing\s*burpee/.test(n))return'Burpee';
+  if(/burpees?\s*over\s*bar/.test(n))return'Burpee Over Bar';
   if(/^burpees?$/.test(n))return'Burpee';
   // Push / gymnastics
   if(/\bhspu\b|handstand\s*push.?up/.test(n))return'HSPU';
@@ -264,6 +268,7 @@ function normMov(nm){
   if(/pause\s*front\s*squat/.test(n))return'Front Squat';
   if(/\bback\s*squat/.test(n))return'Back Squat';
   if(/\bfront\s*squat/.test(n))return'Front Squat';
+  if(/overhead\s*squat|\bohs\b/.test(n))return'OHS';
   // Snatch variants
   if(/lo\s*hang\s*squat\s*snatch|snatch\s*singles?|squat\s*snatch/.test(n))return'Squat Snatch';
   // Clean & Jerk variants
@@ -277,6 +282,8 @@ function normMov(nm){
   if(/(sa\s*|alt\.?\s*|sa\s*alt\.?\s*)?(db|dumbbell)\s*(alt\.?\s*)?(hang\s*)?snatch/.test(n))return'DB Snatch';
   // Hinge / deadlift variants
   if(/^hps$|hang\s*power\s*snatch/.test(n))return'Hang Power Snatch';
+  if(/power\s*cleans?$/.test(n))return'Power Clean';
+  if(/db\s*bent\s*over\s*rows?/.test(n))return'DB Bent Over Row';
   if(/dbl\s*(db|kb)\s*(dead\s*lift|dl|deadlift)|double\s*(db|kb)\s*dead/.test(n))return'DB Deadlift';
   if(/deadlift/.test(n)&&!/(db|dbl|sumo|rdl|romanian|kb|hang|snatch)/.test(n))return'Deadlift';
   return nm;
