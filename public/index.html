@@ -454,8 +454,8 @@ function agg(sessions,start,end){
     }
   }
   for(const s of filt){
-    if(s.happiness){mood.hTotal++;if(s.happiness==='happy')mood.happy++;else if(s.happiness==='unhappy')mood.unhappy++;else mood.neutralH++;}
-    if(s.fun){mood.fTotal++;if(s.fun==='fun')mood.fun++;else if(s.fun==='notfun')mood.notfun++;else mood.neutralF++;}
+    if(s.happiness){mood.hTotal++;if(s.happiness==='happy')mood.happy+=1;else if(s.happiness==='unhappy')mood.unhappy+=0;else mood.neutralH+=0.5;}
+    if(s.fun){mood.fTotal++;if(s.fun==='fun')mood.fun+=1;else if(s.fun==='notfun')mood.notfun+=0;else mood.neutralF+=0.5;}
   }
   const mvsFinal={};
   for(const[nm,d]of Object.entries(mvs))mvsFinal[nm]={...d,freq:d.freq.size};
@@ -830,8 +830,8 @@ function App(){
   function DashTab(){
     const sc=streak<5?'streak-g':streak<7?'streak-y':'streak-r';
     const hm=happyAgg.mood;const fm=funAgg.mood;
-    const happyRate=hm.hTotal?Math.round(hm.happy/hm.hTotal*100):null;
-    const funRate=fm.fTotal?Math.round(fm.fun/fm.fTotal*100):null;
+    const happyRate=hm.hTotal?Math.round((hm.happy+hm.neutralH)/hm.hTotal*100):null;
+    const funRate=fm.fTotal?Math.round((fm.fun+fm.neutralF)/fm.fTotal*100):null;
 
     // Plane balance ratios
     const vpush=planeAgg.sF.push_vertical||0;const vpull=planeAgg.sF.pull_vertical||0;
