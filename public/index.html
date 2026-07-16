@@ -615,6 +615,7 @@ function App(){
   const[subRng,setSubRng]=useState('all');
   const[planeRng,setPlaneRng]=useState('all');
   const[expandDay,setExpandDay]=useState(null);
+  const[trendRng,setTrendRng]=useState('week');
 
   useEffect(()=>{let c=false;(async()=>{
     await sbInit();
@@ -646,6 +647,25 @@ function App(){
   const spPeriods=useMemo(()=>{
     const arr=[];for(let i=spCount-1;i>=0;i--)arr.push(agg(sess,calPeriod(rngDeferred,i).start,calPeriod(rngDeferred,i).end));return arr;
   },[sess,rngDeferred]);
+
+  // Trend table periods
+  const TREND_COUNTS={week:8,month:6,quarter:4,year:3};
+  function trendLabel(type,offset){
+    const{start,end}=calPeriod(type,offset);
+    if(type==='week'){
+      const s=new Date(start+'T12:00:00'),e=new Date(end+'T12:00:00');
+      const sm=s.toLocaleDateString('en-US',{month:'short'});const sd=s.getDate();const ed=e.getDate();
+      return sm+' '+sd+'–'+ed;
+    }
+    if(type==='month'){const d=new Date(start+'T12:00:00');return d.toLocaleDateString('en-US',{month:'short',year:'numeric'});}
+    if(type==='quarter'){const d=new Date(start+'T12:00:00');return'Q'+(Math.floor(d.getMonth()/3)+1)+' '+d.getFullYear();}
+    if(type==='year'){return new Date(start+'T12:00:00').getFullYear().toString();}
+    return start;
+  }
+  const trendPeriods=useMemo(()=>{
+    const n=TREND_COUNTS[trendRng]||6;
+    return Array.from({length:n},(_,i)=>({label:trendLabel(trendRng,i),data:agg(sess,calPeriod(trendRng,i).start,calPeriod(trendRng,i).end)}));
+  },[sess,trendRng]);
 
   const mvTbl=useMemo(()=>{
     const rows=Object.entries(volAgg.mvs).map(([n,d])=>({n,...d}));
@@ -1091,6 +1111,66 @@ function App(){
       <div class="g2">
         <div class="card"><div class="ct">Tonnage by Pattern</div><${HBar} data=${patTD}/></div>
         <div class="card"><div class="ct">Time Domain</div><${Donut} data=${tdD}/></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="ct" style="margin-bottom:0">Period Trends</div>
+          <div style="display:flex;gap:3px">
+            ${[['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year']].map(([k,l])=>
+              html`<button class="rn ${trendRng===k?'act':''}" onClick=${()=>setTrendRng(k)}>${l}</button>`)}
+          </div>
+        </div>
+        ${(()=>{
+          const cols=trendPeriods;
+          const fmtVal=(v,fmt)=>{
+            if(v===0||v===null||v===undefined)return html`<span class="mut">—</span>`;
+            if(fmt==='ton')return(v/1000).toFixed(1)+'k';
+            return v;
+          };
+          const dc=(cur,prev)=>{
+            if(prev===undefined||prev===null)return'';
+            if(cur>prev)return'#2D6A4F';
+            if(cur<prev)return'#B03A2E';
+            return'#B0A89E';
+          };
+          const rows=[
+            {label:'Sessions',fn:d=>d.cnt,fmt:'n'},
+            {label:'Tonnage',fn:d=>Math.round(Object.values(d.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0)),fmt:'ton'},
+            {label:'—',fn:null},
+            {label:'Push',fn:d=>d.pF.push||0,fmt:'n'},
+            {label:'Pull',fn:d=>d.pF.pull||0,fmt:'n'},
+            {label:'Squat',fn:d=>d.pF.squat||0,fmt:'n'},
+            {label:'Hinge',fn:d=>d.pF.hinge||0,fmt:'n'},
+            {label:'Core',fn:d=>d.pF.core||0,fmt:'n'},
+            {label:'—',fn:null},
+            {label:'Weightlifting',fn:d=>d.mF.weightlifting||0,fmt:'n'},
+            {label:'Gymnastics',fn:d=>d.mF.gymnastics||0,fmt:'n'},
+            {label:'Monostructural',fn:d=>d.mF.monostructural||0,fmt:'n'},
+            {label:'—',fn:null},
+            {label:'Short (<10m)',fn:d=>d.td.short||0,fmt:'n'},
+            {label:'Medium (10-20m)',fn:d=>d.td.med||0,fmt:'n'},
+            {label:'Long (20m+)',fn:d=>d.td.long||0,fmt:'n'},
+          ];
+          const vals=rows.map(r=>r.fn?cols.map(c=>r.fn(c.data)):null);
+          return html`<div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead><tr>
+                <th style="text-align:left;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap;min-width:110px">Metric</th>
+                ${cols.map(c=>html`<th style="text-align:right;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap">${c.label}</th>`)}
+              </tr></thead>
+              <tbody>${rows.map((r,ri)=>{
+                if(r.fn===null)return html`<tr><td colspan=${cols.length+1} style="padding:2px 0"><hr style="border:none;border-top:1px solid #EDE9E3;margin:0"/></td></tr>`;
+                const rv=vals[ri];
+                return html`<tr style="border-bottom:1px solid #F5F2EE">
+                  <td style="padding:5px 8px;color:#566263;white-space:nowrap">${r.label}</td>
+                  ${rv.map((v,ci)=>html`<td style=${{textAlign:'right',padding:'5px 8px',fontWeight:ci===0?'700':'400',color:ci===0?dc(v,rv[1]):(ci<rv.length-1?dc(v,rv[ci+1]):'#B0A89E')}}>
+                    ${fmtVal(v,r.fmt)}
+                  </td>`)}
+                </tr>`;
+              })}</tbody>
+            </table>
+          </div>`;
+        })()}
       </div>
       <div class="card"><div class="ct">Movement Detail</div>
         <div style="overflow-y:auto;max-height:480px">
