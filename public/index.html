@@ -617,16 +617,17 @@ function App(){
   const[expandDay,setExpandDay]=useState(null);
   const[trendRng,setTrendRng]=useState('week');
 
-  useEffect(()=>{let c=false;(async()=>{
-    await sbInit();
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000));
-    try{const[s,p,b]=await Promise.race([
-      Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]),
-      timeout.then(()=>{throw new Error('timeout');})
-    ]);
-      if(!c){setSess(s);setPrs(p);setBench(b);}}catch(e){console.error('Load:',e);}
-    if(!c)setReady(true);
-  })();return()=>{c=true;};},[]);
+  useEffect(()=>{let c=false;
+    const T=ms=>new Promise((_,r)=>setTimeout(r,ms));
+    const fallback=setTimeout(()=>{if(!c)setReady(true);},12000);
+    (async()=>{
+      try{await Promise.race([sbInit(),T(5000)]);}catch(e){}
+      try{const[s,p,b]=await Promise.race([
+        Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]),
+        T(8000)
+      ]);if(!c){setSess(s);setPrs(p);setBench(b);}}catch(e){console.error('Load:',e);}
+      clearTimeout(fallback);if(!c)setReady(true);
+    })();return()=>{c=true;clearTimeout(fallback);};},[]);
 
   // Derived
   const lifts=useMemo(()=>prs.filter(p=>p.category==='lift'),[prs]);
