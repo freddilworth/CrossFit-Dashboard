@@ -619,7 +619,11 @@ function App(){
 
   useEffect(()=>{let c=false;(async()=>{
     await sbInit();
-    try{const[s,p,b]=await Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]);
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000));
+    try{const[s,p,b]=await Promise.race([
+      Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]),
+      timeout.then(()=>{throw new Error('timeout');})
+    ]);
       if(!c){setSess(s);setPrs(p);setBench(b);}}catch(e){console.error('Load:',e);}
     if(!c)setReady(true);
   })();return()=>{c=true;};},[]);
