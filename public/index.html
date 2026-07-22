@@ -396,6 +396,7 @@ function parseScoreReps(score){
   return Math.min(parseFloat(m[1])||0,parseFloat(m[2])||0);
 }
 function calcStrengthTon(sets,score){
+  if(!Array.isArray(sets))sets=[];
   // No sets — estimate from score (e.g. "1 @ 325" or "5 @ 245")
   if(!sets||!sets.length){
     const sw=parseScoreWeight(score);const sr=parseScoreReps(score);
@@ -446,7 +447,7 @@ function agg(sessions,start,end){
     for(const b of(sess.blocks||[])){
       if(b.k==='strength'||b.k==='accessory'){
         const cs=clsAllCached(b.mov);
-        const reps=(b.sets||[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0);
+        const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0);
         const ton=calcStrengthTon(b.sets,b.score);
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,ton,sess.date));
       }
