@@ -64,7 +64,20 @@ QUANTITY RULES:
 - "1x5 - 185" means 1 set of 5 at 185. "2x5 - 205" means 2 sets of 5 at 205.
 - Rx defaults to true unless stated otherwise (scaled, modified)
 - If text mentions notes like "felt heavy" or "knee bothering me", put in "notes"
-- Accessories (curls, lateral raise, face pull, etc.) use k:"accessory"`;
+- Accessories (curls, lateral raise, face pull, etc.) use k:"accessory"
+
+DISTANCE RULE (critical — never store round count for distance movements):
+For Run, Row, Ski, Bike and any movement measured in meters/miles/calories:
+- Always store TOTAL METERS as "r" (not rounds, not laps)
+- Multiply: prescribed_rounds × meters_per_round
+- Examples:
+  - "4 Rounds, 400m Run" → r: 1600
+  - "6 Rounds For Time: 200m Run" → r: 1200
+  - "Every 9:00 for 36:00: 400m Run" → 4 rounds → r: 1600
+  - "EMOM 24min (6 stations), stations 1-2: 300m Run" → 4 rounds of that station → r: 1200
+  - "Run 3 miles" → r: 4827 (convert miles to meters: 1 mile = 1609m)
+  - "Run 800m" → r: 800
+- For calories (Cal Row, Cal Ski, Cal Bike): store total calories as "r", same multiplication rule`;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
