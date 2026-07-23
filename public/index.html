@@ -656,8 +656,16 @@ function App(){
 
   // Trend table periods
   const TREND_COUNTS={week:8,month:6,quarter:4,year:3};
+  function calCalWeek(offset){
+    const now=new Date();const day=now.getDay();
+    const toMon=day===0?-6:1-day;
+    const mon=new Date(now);mon.setDate(now.getDate()+toMon-offset*7);
+    const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+    return{start:mon.toISOString().slice(0,10),end:sun.toISOString().slice(0,10)};
+  }
+  function trendPeriod(type,offset){return type==='week'?calCalWeek(offset):calPeriod(type,offset);}
   function trendLabel(type,offset){
-    const{start,end}=calPeriod(type,offset);
+    const{start,end}=trendPeriod(type,offset);
     if(type==='week'){
       const s=new Date(start+'T12:00:00'),e=new Date(end+'T12:00:00');
       const sm=s.toLocaleDateString('en-US',{month:'short'});const sd=s.getDate();const ed=e.getDate();
@@ -670,7 +678,7 @@ function App(){
   }
   const trendPeriods=useMemo(()=>{
     const n=TREND_COUNTS[trendRng]||6;
-    return Array.from({length:n},(_,i)=>({label:trendLabel(trendRng,i),data:agg(sess,calPeriod(trendRng,i).start,calPeriod(trendRng,i).end)}));
+    return Array.from({length:n},(_,i)=>{const{start,end}=trendPeriod(trendRng,i);return{label:trendLabel(trendRng,i),data:agg(sess,start,end)};});
   },[sess,trendRng]);
 
   const mvTbl=useMemo(()=>{
