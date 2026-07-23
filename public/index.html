@@ -1139,6 +1139,7 @@ function App(){
           const fmtVal=(v,fmt)=>{
             if(v===0||v===null||v===undefined)return html`<span class="mut">—</span>`;
             if(fmt==='ton')return(v/1000).toFixed(1)+'k';
+            if(fmt==='mi')return(v/1609).toFixed(1)+' mi';
             return v;
           };
           const dc=(cur,prev)=>{
@@ -1155,6 +1156,7 @@ function App(){
             {label:'Pull',fn:d=>d.pF.pull||0,fmt:'n'},
             {label:'Squat',fn:d=>d.pF.squat||0,fmt:'n'},
             {label:'Hinge',fn:d=>d.pF.hinge||0,fmt:'n'},
+            {label:'Miles Run',fn:d=>d.mvs['Run']?.reps||0,fmt:'mi'},
             {label:'—',fn:null},
             {label:'Weightlifting',fn:d=>d.mF.weightlifting||0,fmt:'n'},
             {label:'Gymnastics',fn:d=>d.mF.gymnastics||0,fmt:'n'},
