@@ -308,10 +308,21 @@ function fds(d){if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString
 function sessPatterns(s){const p=new Set();for(const b of(s.blocks||[])){if(b.k==='strength'||b.k==='accessory')clsAllCached(b.mov).forEach(c=>{if(c.pat)p.add(c.pat);});if(b.k==='metcon')for(const pm of(b.pm||[]))clsAllCached(pm.n).forEach(c=>{if(c.pat)p.add(c.pat);});}return[...p];}
 function inferTd(fmt){
   if(!fmt)return null;
-  // Extract leading or prominent duration from format string: "28 min EMOM", "10 Min AMRAP", "For Time (20 min cap)", etc.
-  const m=fmt.match(/(\d+)\s*(?:min|minute)/i);
-  if(!m)return null;
-  const n=parseInt(m[1]);
+  const f=fmt.toLowerCase();
+  let n=null;
+  // "Every 6 minutes for 4 Rounds" or "Every 5:00 for 4 Rounds" → interval × rounds
+  const evRounds=f.match(/every\s+(\d+)(?::\d{2})?\s*(?:min(?:utes?)?)?\s*(?:for\s+)?(\d+)\s*rounds?/);
+  // "Every 9:00 for 36:00" → total duration is the second mm:ss
+  const evDur=f.match(/every\s+\d+:\d{2}\s+for\s+(\d+):\d{2}/);
+  // "EMOM 12:00" or "12:00 EMOM" → total minutes from mm:ss
+  const emomMmss=f.match(/(?:emom\s+(\d+):\d{2}|(\d+):\d{2}\s+emom)/);
+  // "28 min EMOM", "15 min AMRAP", "20 min cap" — plain minutes (must be first number before 'min')
+  const plainMin=f.match(/(\d+)\s*min/);
+  if(evRounds)n=parseInt(evRounds[1])*parseInt(evRounds[2]);
+  else if(evDur)n=parseInt(evDur[1]);
+  else if(plainMin)n=parseInt(plainMin[1]);
+  else if(emomMmss)n=parseInt(emomMmss[1]||emomMmss[2]);
+  if(n===null)return null;
   if(n<10)return'short';
   if(n<=20)return'med';
   return'long';
