@@ -460,14 +460,14 @@ function agg(sessions,start,end){
         const cs=clsAllCached(b.mov);
         const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0);
         const ton=calcStrengthTon(b.sets,b.score);
-        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,ton,sess.date));
+        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,i===0?ton:0,sess.date));
       }
       if(b.k==='metcon'){
         const tdv=inferTd(b.fmt)||b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
           const cs=clsAllCached(pm.n);
           const pr=parseFloat(pm.r)||0;const pw=parseFloat(pm.w)||0;
-          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,pr*pw,sess.date));
+          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,i===0?pr*pw:0,sess.date));
         }
       }
     }
