@@ -164,6 +164,9 @@ const PV={pat:'push',sub:'vertical',mod:'weightlifting'};
 const PH={pat:'push',sub:'horizontal',mod:'gymnastics'};
 const RV={pat:'pull',sub:'vertical',mod:'weightlifting'};
 const RH={pat:'pull',sub:'horizontal',mod:'weightlifting'};
+// dualTon variants: secondary pattern also counts full tonnage (active pull to shoulder/overhead)
+const RVd={pat:'pull',sub:'vertical',mod:'weightlifting',dualTon:true};
+const RHd={pat:'pull',sub:'horizontal',mod:'weightlifting',dualTon:true};
 const SQ={pat:'squat',sub:'traditional',mod:'weightlifting'};
 const SL={pat:'squat',sub:'single_leg',mod:'weightlifting'};
 const BD={pat:null,sub:'bounding',mod:'monostructural'};
@@ -181,32 +184,30 @@ function clsAll(nm){
   if(/curtis\s*p/.test(n))return[H,RV,SL,PV];
   if(/\bcluster\b/.test(n))return[H,RV,SQ,PV];
 
-  // ── Clean & Jerk: hinge + vertical pull + vertical push ──
-  if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return[H,RV,PV];
+  // ── Clean & Jerk: hinge + vertical pull (active) + vertical push ──
+  if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return[H,RVd,PV];
 
-  // ── Snatch DL / Snatch pull to hip: hinge + horizontal pull ──
+  // ── Snatch DL / Snatch pull to hip: hinge only (no active overhead pull) ──
   if(/snatch\s*(dead\s*lift|dl\b|pull)|snatch\s*dl\s*to/.test(n))return[H,RH];
 
-  // ── SDHP: hinge + vertical pull ──
-  if(/\bsdhp\b|sumo\s*(dead\s*lift|dl)?\s*high\s*pull/.test(n))return[H,RV];
+  // ── SDHP: hinge + vertical pull (active) ──
+  if(/\bsdhp\b|sumo\s*(dead\s*lift|dl)?\s*high\s*pull/.test(n))return[H,RVd];
 
-  // ── Deadlift family: hinge + horizontal pull ──
-  if(/\brdl\b|romanian/.test(n))return[H,RH];
-  if(/dead\s*lift|deadlift/.test(n)&&!/snatch|high\s*pull|sdhp/.test(n))return[H,RH];
+  // ── Deadlift family: hinge only ──
+  if(/\brdl\b|romanian/.test(n))return[H];
+  if(/dead\s*lift|deadlift/.test(n)&&!/snatch|high\s*pull|sdhp/.test(n))return[H];
 
-  // ── Swing: hinge + vertical pull ──
-  if(/\bswing\b/.test(n))return[H,RV];
+  // ── Swing: hinge only (ballistic hip, not an active arm pull) ──
+  if(/\bswing\b/.test(n))return[H];
 
-  // ── Snatch variants: hinge + vertical pull ──
-  // Catches barbell and DB/KB snatches, all hang/power/squat/floating variations
-  if(/snatch/.test(n)&&!/dead\s*lift|dl\b|pull\b/.test(n))return[H,RV];
+  // ── Snatch variants: hinge + vertical pull (active) ──
+  if(/snatch/.test(n)&&!/dead\s*lift|dl\b|pull\b/.test(n))return[H,RVd];
 
-  // ── Clean variants (no jerk): hinge + vertical pull ──
-  // Catches barbell and DB/KB cleans, all hang/power/squat/lo/hi/floating variations
-  if(/\bclean\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RV];
+  // ── Clean variants (no jerk): hinge + vertical pull (active) ──
+  if(/\bclean\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RVd];
 
-  // ── Sandbag clean / SB over shoulder: hinge + horizontal pull ──
-  if(/sandbag|over\s*shoulder/.test(n))return[H,RH];
+  // ── Sandbag clean / SB over shoulder: hinge + horizontal pull (active) ──
+  if(/sandbag|over\s*shoulder/.test(n))return[H,RHd];
 
   return[cls(nm)];
 }
@@ -440,7 +441,9 @@ function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
   const pF={},pT={},pR={},mF={},mT={},mR={},sF={},sT={},td={short:0,med:0,long:0},mvs={};
   const mood={happy:0,neutralH:0,unhappy:0,hTotal:0,fun:0,neutralF:0,notfun:0,fTotal:0};
-  function add(nm,pat,sub,mod,reps,ton,date){
+  let primaryTon=0;
+  function add(nm,pat,sub,mod,reps,ton,date,isPrimary){
+    if(isPrimary)primaryTon+=ton;
     if(pat){pF[pat]=(pF[pat]||0)+1;pT[pat]=(pT[pat]||0)+ton;pR[pat]=(pR[pat]||0)+reps;
       if(sub){const sk=pat+'_'+sub;sF[sk]=(sF[sk]||0)+1;sT[sk]=(sT[sk]||0)+ton;}}
     if(mod){mF[mod]=(mF[mod]||0)+1;mT[mod]=(mT[mod]||0)+ton;mR[mod]=(mR[mod]||0)+reps;}
@@ -460,14 +463,14 @@ function agg(sessions,start,end){
         const cs=clsAllCached(b.mov);
         const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0);
         const ton=calcStrengthTon(b.sets,b.score);
-        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,i===0?ton:0,sess.date));
+        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,sess.date,i===0));
       }
       if(b.k==='metcon'){
         const tdv=inferTd(b.fmt)||b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
           const cs=clsAllCached(pm.n);
           const pr=parseFloat(pm.r)||0;const pw=parseFloat(pm.w)||0;
-          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,i===0?pr*pw:0,sess.date));
+          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,sess.date,i===0));
         }
       }
     }
@@ -478,7 +481,7 @@ function agg(sessions,start,end){
   }
   const mvsFinal={};
   for(const[nm,d]of Object.entries(mvs))mvsFinal[nm]={...d,freq:d.freq.size};
-  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood};
+  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood,primaryTon};
 }
 
 // ══════ CONSECUTIVE DAYS ══════
@@ -1161,7 +1164,7 @@ function App(){
           };
           const rows=[
             {label:'Sessions',fn:d=>d.cnt,fmt:'n'},
-            {label:'Tonnage',fn:d=>Math.round(Object.values(d.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0)),fmt:'ton'},
+            {label:'Tonnage',fn:d=>Math.round(d.primaryTon||0),fmt:'ton'},
             {label:'—',fn:null},
             {label:'Push Tonnage',fn:d=>Math.round(d.pT.push||0),fmt:'ton'},
             {label:'Pull Tonnage',fn:d=>Math.round(d.pT.pull||0),fmt:'ton'},
