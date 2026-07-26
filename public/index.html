@@ -1121,7 +1121,7 @@ function App(){
               <button style="background:transparent;color:#B03A2E;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{if(confirm('Delete?')){sbDel('sessions','date=eq.'+s.date);setSess(p=>p.filter(x=>x.date!==s.date));}}}>Delete</button>
             </div>
           </div>`}
-        </div>`;})}`)()}
+        </div>`;})})()}
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onClick=${()=>setShowImport(v=>!v)}>
