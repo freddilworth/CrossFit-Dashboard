@@ -633,6 +633,8 @@ function App(){
   const[planeRng,setPlaneRng]=useState('all');
   const[expandDay,setExpandDay]=useState(null);
   const[trendRng,setTrendRng]=useState('week');
+  const[trendDrill,setTrendDrill]=useState(null);
+  const[trendExpand,setTrendExpand]=useState(null);
 
   useEffect(()=>{let c=false;
     const T=ms=>new Promise((_,r)=>setTimeout(r,ms));
@@ -892,32 +894,8 @@ function App(){
     const happyRate=hm.hTotal?Math.round((hm.happy+hm.neutralH)/hm.hTotal*100):null;
     const funRate=fm.fTotal?Math.round((fm.fun+fm.neutralF)/fm.fTotal*100):null;
 
-    // Plane balance ratios
-    const vpush=planeAgg.sF.push_vertical||0;const vpull=planeAgg.sF.pull_vertical||0;
-    const hpush=planeAgg.sF.push_horizontal||0;const hpull=planeAgg.sF.pull_horizontal||0;
-    const vpRatio=vpull>0?(vpush/vpull).toFixed(1):(vpush>0?'∞':'—');
-    const hpRatio=hpull>0?(hpush/hpull).toFixed(1):(hpush>0?'∞':'—');
-    const ratioColor=r=>r==='—'?'#B0A89E':r==='∞'?'#B03A2E':parseFloat(r)<=1.5?'#2D6A4F':parseFloat(r)<=3?'#C07D3A':'#B03A2E';
-
-    // Sub-category
-    const vpushS=subAgg.sF.push_vertical||0;const hpushS=subAgg.sF.push_horizontal||0;
-    const vpullS=subAgg.sF.pull_vertical||0;const hpullS=subAgg.sF.pull_horizontal||0;
-    const trad=subAgg.sF.squat_traditional||0;const sleg=subAgg.sF.squat_single_leg||0;
-
-    // Last 7 days
-    const last7=[];
-    for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=d.toISOString().slice(0,10);last7.push({date:ds,session:sess.find(x=>x.date===ds)||null});}
-    const tdLabel={short:'Short',med:'Med',long:'Long'};
-    const tdColor={short:'#C0392B',med:'#2E86C1',long:'#27AE60'};
-    function moodDot(val,type){
-      const good=type==='h'?val==='happy':val==='fun';
-      const bad=type==='h'?val==='unhappy':val==='notfun';
-      const c=!val?'#DDD7CE':good?'#2D6A4F':bad?'#B03A2E':'#C07D3A';
-      return html`<div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></div>`;
-    }
-
     return html`<div>
-      <div class="g4" style="margin-bottom:14px">
+      <div class="g3" style="margin-bottom:14px">
         <div class="streak ${sc}">
           <div style="font-size:28px;font-weight:700">${streak}</div>
           <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;font-weight:600">Consecutive Days</div>
@@ -934,59 +912,6 @@ function App(){
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${funRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setFunRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="text-align:center;color:${funRate===null?'#B0A89E':funRate>=60?'#2D6A4F':funRate>=40?'#C07D3A':'#B03A2E'}">${funRate===null?'—':funRate+'%'}</div>
           <div class="ratio-lbl" style="text-align:center">Had Fun</div>
-        </div>
-        <div class="ratio-card" style="padding:10px">
-          <div style="font-size:9px;font-weight:700;color:#2E3F5C;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Plane Balance</div>
-          <div style="display:flex;gap:2px;margin-bottom:8px">${RNGS.map(([k,l])=>html`<button class="rn ${planeRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setPlaneRng(k)}>${l}</button>`)}</div>
-          <div style="font-size:11px;line-height:2.2">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:#7A7168">Vertical Push:Pull</span>
-              <span style="font-weight:700;font-size:13px;color:${ratioColor(vpRatio)}">${vpRatio}:1</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:#7A7168">Horizontal Push:Pull</span>
-              <span style="font-weight:700;font-size:13px;color:${ratioColor(hpRatio)}">${hpRatio}:1</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="ct">Last 7 Days</div>
-        ${last7.map(({date,session:s})=>{
-          const isOpen=expandDay===date;
-          if(!s)return html`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #DDD7CE">
-            <span style="width:72px;flex-shrink:0;font-size:12px;color:#B0A89E">${fds(date)}</span>
-            <span style="font-size:11px;color:#B0A89E;font-style:italic">Rest</span>
-          </div>`;
-          const pats=sessPatterns(s);const td=sessTd(s);
-          return html`<div>
-            <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid ${isOpen?'transparent':'#DDD7CE'};cursor:pointer" onClick=${()=>setExpandDay(isOpen?null:date)}>
-              <span style="width:72px;flex-shrink:0;font-size:12px;font-weight:700;color:#2E3F5C">${fds(date)}</span>
-              ${td&&html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${tdColor[td]+'22'};color:${tdColor[td]}">${tdLabel[td]}</span>`}
-              <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">
-                ${pats.map(p=>html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${(PATS[p]?.c||'#ccc')+'22'};color:${PATS[p]?.c||'#ccc'}">${PATS[p]?.l||p}</span>`)}
-              </div>
-              <div style="display:flex;gap:4px;align-items:center">
-                ${moodDot(s.happiness,'h')}${moodDot(s.fun,'f')}
-                <span style="color:#B0A89E;font-size:10px;margin-left:2px">${isOpen?'▲':'▼'}</span>
-              </div>
-            </div>
-            ${isOpen&&html`<div style="padding:8px 0 4px;border-bottom:1px solid #DDD7CE">
-              ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
-            </div>`}
-          </div>`;
-        })}
-      </div>
-
-      <div class="card">
-        ${CardHead({title:'Pattern Sub-Category Detail',rng:subRng,setRng:setSubRng})}
-        <div style="font-size:12px;line-height:2">
-          <div><b>Push:</b> Vertical ${vpushS} / Horizontal ${hpushS}</div>
-          <div><b>Pull:</b> Vertical ${vpullS} / Horizontal ${hpullS}</div>
-          <div><b>Squat:</b> Traditional ${trad} / Single-Leg ${sleg}</div>
-          <div><b>Monostructural:</b> Bounding ${subAgg.sF.mono_bounding||0} / Machines ${subAgg.sF.mono_machines||0}</div>
-          <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
         </div>
       </div>
       ${VolTab()}
@@ -1034,13 +959,15 @@ function App(){
         </div>`}
       </div>
       <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sessFilter?'8px':'0'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sessFilter||showImport?'8px':'0'}">
           <div class="ct" style="margin-bottom:0">Session History</div>
-          ${sessFilter&&html`<div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:11px;color:#5C7FA3;font-weight:600">${sessFilter.label}</span>
-            <button onClick=${()=>setSessFilter(null)} style="font-size:10px;font-weight:600;color:#7A7168;background:transparent;border:1px solid #D5D0C8;border-radius:4px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear ×</button>
-          </div>`}
+          <div style="display:flex;align-items:center;gap:6px">
+            ${sessFilter&&html`<span style="font-size:11px;color:#5C7FA3;font-weight:600">${sessFilter.label}</span>`}
+            ${sessFilter&&html`<button onClick=${()=>setSessFilter(null)} style="font-size:10px;font-weight:600;color:#7A7168;background:transparent;border:1px solid #D5D0C8;border-radius:4px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear ×</button>`}
+            <button onClick=${()=>setShowImport(v=>!v)} style="font-size:10px;font-weight:600;color:#7A7168;background:transparent;border:1px solid #D5D0C8;border-radius:4px;padding:2px 7px;cursor:pointer;font-family:inherit">${showImport?'Close':'Import'}</button>
+          </div>
         </div>
+        ${showImport&&html`<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #EDE9E3">${ImportTab()}</div>`}
         ${(()=>{const filtered=sessFilter?sess.filter(s=>s.date>=sessFilter.start&&s.date<=sessFilter.end):sess;
         return filtered.length===0?html`<div class="mut" style="padding:12px 0">${sessFilter?'No sessions in this period.':'No sessions yet.'}</div>`:
         filtered.map(s=>{const o=exp===s.date;const ed=editSess===s.date;
@@ -1123,18 +1050,24 @@ function App(){
           </div>`}
         </div>`;})})()}
       </div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onClick=${()=>setShowImport(v=>!v)}>
-          <div class="ct" style="margin-bottom:0">Import from Push Press</div>
-          <span style="font-size:11px;color:#7A7168">${showImport?'▲':'▼'}</span>
-        </div>
-        ${showImport&&html`<div style="margin-top:12px">${ImportTab()}</div>`}
-      </div>
     </div>`;
   }
 
   // ══════ VOLUME TAB ══════
   function VolTab(){
+    const last7=[];
+    for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=d.toISOString().slice(0,10);last7.push({date:ds,session:sess.find(x=>x.date===ds)||null});}
+    const tdLabel={short:'Short',med:'Med',long:'Long'};
+    const tdColor={short:'#C0392B',med:'#2E86C1',long:'#27AE60'};
+    function moodDot(val,type){
+      const good=type==='h'?val==='happy':val==='fun';
+      const bad=type==='h'?val==='unhappy':val==='notfun';
+      const c=!val?'#DDD7CE':good?'#2D6A4F':bad?'#B03A2E':'#C07D3A';
+      return html`<div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></div>`;
+    }
+    const vpushS=subAgg.sF.push_vertical||0;const hpushS=subAgg.sF.push_horizontal||0;
+    const vpullS=subAgg.sF.pull_vertical||0;const hpullS=subAgg.sF.pull_horizontal||0;
+    const trad=subAgg.sF.squat_traditional||0;const sleg=subAgg.sF.squat_single_leg||0;
     const patFD=PK.map(k=>({label:PATS[k].l,val:volAgg.pF[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
     const patTD=PK.map(k=>({label:PATS[k].l,val:volAgg.pT[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
     const modFD=MK.map(k=>({label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
@@ -1165,7 +1098,7 @@ function App(){
           <div class="ct" style="margin-bottom:0">Period Trends</div>
           <div style="display:flex;gap:3px">
             ${[['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year']].map(([k,l])=>
-              html`<button class="rn ${trendRng===k?'act':''}" onClick=${()=>setTrendRng(k)}>${l}</button>`)}
+              html`<button class="rn ${trendRng===k?'act':''}" onClick=${()=>{setTrendRng(k);setTrendDrill(null);setTrendExpand(null);}}>${l}</button>`)}
           </div>
         </div>
         ${(()=>{
@@ -1205,7 +1138,7 @@ function App(){
             <table style="width:100%;border-collapse:collapse;font-size:11px">
               <thead><tr>
                 <th style="text-align:left;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap;min-width:110px">Metric</th>
-                ${cols.map(c=>html`<th style="text-align:right;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none" onClick=${()=>{const{start,end}=trendPeriod(trendRng,cols.indexOf(c));drillToSessions(start,end,c.label);}} title="View sessions">${c.label} <span style="font-size:9px;opacity:.4">↗</span></th>`)}
+                ${cols.map(c=>html`<th style=${{textAlign:'right',padding:'5px 8px',fontWeight:'600',whiteSpace:'nowrap',cursor:'pointer',userSelect:'none',color:trendDrill?.label===c.label?'#2E3F5C':'#7A7168'}} onClick=${()=>{const{start,end}=trendPeriod(trendRng,cols.indexOf(c));setTrendDrill(trendDrill?.label===c.label?null:{start,end,label:c.label});setTrendExpand(null);}} title="View sessions">${c.label} <span style="font-size:9px;opacity:.4">${trendDrill?.label===c.label?'▼':'↓'}</span></th>`)}
               </tr></thead>
               <tbody>${rows.map((r,ri)=>{
                 if(r.fn===null)return html`<tr><td colspan=${cols.length+1} style="padding:2px 0"><hr style="border:none;border-top:1px solid #EDE9E3;margin:0"/></td></tr>`;
@@ -1220,6 +1153,57 @@ function App(){
             </table>
           </div>`;
         })()}
+        ${trendDrill&&(()=>{
+          const ds=sess.filter(s=>s.date>=trendDrill.start&&s.date<=trendDrill.end);
+          return html`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #EDE9E3">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-size:11px;font-weight:700;color:#2E3F5C">${trendDrill.label} · ${ds.length} session${ds.length!==1?'s':''}</div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <button onClick=${()=>drillToSessions(trendDrill.start,trendDrill.end,trendDrill.label)} style="font-size:10px;font-weight:600;color:#5C7FA3;background:transparent;border:none;cursor:pointer;font-family:inherit">View in Sessions →</button>
+                <button onClick=${()=>{setTrendDrill(null);setTrendExpand(null);}} style="font-size:10px;font-weight:600;color:#7A7168;background:transparent;border:none;cursor:pointer;font-family:inherit">✕</button>
+              </div>
+            </div>
+            ${ds.length===0?html`<div class="mut" style="padding:8px 0">No sessions this period.</div>`:
+            ds.map(s=>{const isOpen=trendExpand===s.date;return html`<div>
+              <div class="sr ${isOpen?'open':''}" onClick=${()=>setTrendExpand(isOpen?null:s.date)}>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-weight:700;font-size:12px;color:#2E3F5C">${fd(s.date)}</span>
+                  <div style="display:flex;gap:3px;align-items:center">
+                    ${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k==='strength'?'str':b.k==='metcon'?'met':'acc'}">${{strength:'STR',metcon:'MET',accessory:'ACC'}[b.k]||b.k}</span>`)}
+                    <span style="margin-left:6px;color:#7A7168;font-size:12px">${isOpen?'▲':'▼'}</span>
+                  </div>
+                </div>
+              </div>
+              ${isOpen&&html`<div class="sd">${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}${s.raw_text&&html`<div class="note-block">${s.raw_text}</div>`}</div>`}
+            </div>`;})}</div>`;
+        })()}
+      </div>
+      <div class="card">
+        <div class="ct">Last 7 Days</div>
+        ${last7.map(({date,session:s})=>{
+          const isOpen=expandDay===date;
+          if(!s)return html`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #DDD7CE">
+            <span style="width:72px;flex-shrink:0;font-size:12px;color:#B0A89E">${fds(date)}</span>
+            <span style="font-size:11px;color:#B0A89E;font-style:italic">Rest</span>
+          </div>`;
+          const pats=sessPatterns(s);const td=sessTd(s);
+          return html`<div>
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid ${isOpen?'transparent':'#DDD7CE'};cursor:pointer" onClick=${()=>setExpandDay(isOpen?null:date)}>
+              <span style="width:72px;flex-shrink:0;font-size:12px;font-weight:700;color:#2E3F5C">${fds(date)}</span>
+              ${td&&html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${tdColor[td]+'22'};color:${tdColor[td]}">${tdLabel[td]}</span>`}
+              <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">
+                ${pats.map(p=>html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${(PATS[p]?.c||'#ccc')+'22'};color:${PATS[p]?.c||'#ccc'}">${PATS[p]?.l||p}</span>`)}
+              </div>
+              <div style="display:flex;gap:4px;align-items:center">
+                ${moodDot(s.happiness,'h')}${moodDot(s.fun,'f')}
+                <span style="color:#B0A89E;font-size:10px;margin-left:2px">${isOpen?'▲':'▼'}</span>
+              </div>
+            </div>
+            ${isOpen&&html`<div style="padding:8px 0 4px;border-bottom:1px solid #DDD7CE">
+              ${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}
+            </div>`}
+          </div>`;
+        })}
       </div>
       <div class="card"><div class="ct">Movement Detail</div>
         <div style="overflow-y:auto;max-height:480px">
@@ -1237,6 +1221,16 @@ function App(){
           <td style="text-align:right;color:${m.ton>0?'#B03A2E':'#B0A89E'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
           <td class="mut">${fd(m.last)}</td>
         </tr>`)}</tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        ${CardHead({title:'Pattern Sub-Category Detail',rng:subRng,setRng:setSubRng})}
+        <div style="font-size:12px;line-height:2">
+          <div><b>Push:</b> Vertical ${vpushS} / Horizontal ${hpushS}</div>
+          <div><b>Pull:</b> Vertical ${vpullS} / Horizontal ${hpullS}</div>
+          <div><b>Squat:</b> Traditional ${trad} / Single-Leg ${sleg}</div>
+          <div><b>Monostructural:</b> Bounding ${subAgg.sF.mono_bounding||0} / Machines ${subAgg.sF.mono_machines||0}</div>
+          <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
         </div>
       </div>
     </div>`;
