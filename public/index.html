@@ -611,6 +611,7 @@ function App(){
   const[bmDate,setBmDate]=useState(new Date().toISOString().slice(0,10));
   const[bmNote,setBmNote]=useState('');
   const[bmSaving,setBmSaving]=useState(false);
+  const[sessFilter,setSessFilter]=useState(null);
   const[genComponents,setGenComponents]=useState({strength:true,metcon:true,accessory:false});
   const[genContext,setGenContext]=useState('');
   const[genMessages,setGenMessages]=useState([]);
@@ -881,6 +882,8 @@ function App(){
   const subAgg=useMemo(()=>agg(sess,calPeriod(subRng,0).start,calPeriod(subRng,0).end),[sess,subRng]);
   const planeAgg=useMemo(()=>agg(sess,calPeriod(planeRng,0).start,calPeriod(planeRng,0).end),[sess,planeRng]);
 
+  function drillToSessions(start,end,label){setSessFilter({start,end,label});setTab('Sessions');}
+
   // ══════ DASHBOARD TAB ══════
   function DashTab(){
     const sc=streak<5?'streak-g':streak<7?'streak-y':'streak-r';
@@ -1028,9 +1031,17 @@ function App(){
           </div>
         </div>`}
       </div>
-      <div class="card"><div class="ct">Session History</div>
-        ${sess.length===0?html`<div class="mut" style="padding:12px 0">No sessions yet.</div>`:
-        sess.map(s=>{const o=exp===s.date;const ed=editSess===s.date;
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sessFilter?'8px':'0'}">
+          <div class="ct" style="margin-bottom:0">Session History</div>
+          ${sessFilter&&html`<div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:#5C7FA3;font-weight:600">${sessFilter.label}</span>
+            <button onClick=${()=>setSessFilter(null)} style="font-size:10px;font-weight:600;color:#7A7168;background:transparent;border:1px solid #D5D0C8;border-radius:4px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear ×</button>
+          </div>`}
+        </div>
+        ${(()=>{const filtered=sessFilter?sess.filter(s=>s.date>=sessFilter.start&&s.date<=sessFilter.end):sess;
+        return filtered.length===0?html`<div class="mut" style="padding:12px 0">${sessFilter?'No sessions in this period.':'No sessions yet.'}</div>`:
+        filtered.map(s=>{const o=exp===s.date;const ed=editSess===s.date;
           const hLabel={happy:'Happy',neutral:'Neutral',unhappy:'Not Happy'};
           const fLabel={fun:'Had Fun',neutral:'Neutral',notfun:'Not Fun'};
           function openEdit(){setEditSess(s.date);setEditRawText(s.raw_text||'');setEditErr('');}
@@ -1108,7 +1119,7 @@ function App(){
               <button style="background:transparent;color:#B03A2E;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{if(confirm('Delete?')){sbDel('sessions','date=eq.'+s.date);setSess(p=>p.filter(x=>x.date!==s.date));}}}>Delete</button>
             </div>
           </div>`}
-        </div>`;})}
+        </div>`;})}`;})()}
       </div>
     </div>`;
   }
@@ -1185,7 +1196,7 @@ function App(){
             <table style="width:100%;border-collapse:collapse;font-size:11px">
               <thead><tr>
                 <th style="text-align:left;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap;min-width:110px">Metric</th>
-                ${cols.map(c=>html`<th style="text-align:right;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap">${c.label}</th>`)}
+                ${cols.map(c=>html`<th style="text-align:right;padding:5px 8px;color:#7A7168;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none" onClick=${()=>{const{start,end}=trendPeriod(trendRng,cols.indexOf(c));drillToSessions(start,end,c.label);}} title="View sessions">${c.label} <span style="font-size:9px;opacity:.4">↗</span></th>`)}
               </tr></thead>
               <tbody>${rows.map((r,ri)=>{
                 if(r.fn===null)return html`<tr><td colspan=${cols.length+1} style="padding:2px 0"><hr style="border:none;border-top:1px solid #EDE9E3;margin:0"/></td></tr>`;
