@@ -106,7 +106,7 @@ function cls(nm){
   if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/broad\s*jump|lateral\s*bound/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   // Core
-  if(n==='ttb'||/toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
+  if(n==='ttb'||n==='t2b'||/toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/ghd|sit.?up|l-sit|plank|v-up|ab\s*mat|k2e|knee.*elbow|hollow/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/\bhkr\b|hanging\s*knee\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   // Pull — vertical (BMU before generic muscle-up)
