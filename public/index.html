@@ -571,7 +571,7 @@ let _rngTimer=null;
 // ══════ APP ══════
 function App(){
   const[ready,setReady]=useState(false);
-  const[tab,setTab]=useState('Dashboard');
+  const[tab,setTab]=useState('Home');
   const[sess,setSess]=useState([]);
   const[prs,setPrs]=useState([]);
   const[bench,setBench]=useState([]);
@@ -619,6 +619,7 @@ function App(){
   const[genError,setGenError]=useState('');
   const[genInput,setGenInput]=useState('');
   const[genAthleteData,setGenAthleteData]=useState(null);
+  const[showImport,setShowImport]=useState(false);
   const[impRows,setImpRows]=useState([]);
   const[impSkip,setImpSkip]=useState([]);
   const[impDone,setImpDone]=useState(0);
@@ -884,8 +885,8 @@ function App(){
 
   function drillToSessions(start,end,label){setSessFilter({start,end,label});setTab('Sessions');}
 
-  // ══════ DASHBOARD TAB ══════
-  function DashTab(){
+  // ══════ HOME TAB ══════
+  function HomeTab(){
     const sc=streak<5?'streak-g':streak<7?'streak-y':'streak-r';
     const hm=happyAgg.mood;const fm=funAgg.mood;
     const happyRate=hm.hTotal?Math.round((hm.happy+hm.neutralH)/hm.hTotal*100):null;
@@ -988,6 +989,7 @@ function App(){
           <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
         </div>
       </div>
+      ${VolTab()}
     </div>`;
   }
 
@@ -1120,6 +1122,13 @@ function App(){
             </div>
           </div>`}
         </div>`;})}`;})()}
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onClick=${()=>setShowImport(v=>!v)}>
+          <div class="ct" style="margin-bottom:0">Import from Push Press</div>
+          <span style="font-size:11px;color:#7A7168">${showImport?'▲':'▼'}</span>
+        </div>
+        ${showImport&&html`<div style="margin-top:12px">${ImportTab()}</div>`}
       </div>
     </div>`;
   }
@@ -1508,18 +1517,16 @@ function App(){
     </div>`;
   }
 
-  const tabs=['Dashboard','Analytics','Sessions','Create Session','PRs','Import'];
+  const tabs=['Home','Sessions','PRs & Benchmarks','Create Session'];
 
   return html`<div>
     <div class="hdr"><div class="logo">⚡</div><div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
     <div class="bod">
-      ${tab==='Dashboard'&&DashTab()}
+      ${tab==='Home'&&HomeTab()}
       ${tab==='Sessions'&&LogTab()}
-      ${tab==='Analytics'&&VolTab()}
-      ${tab==='PRs'&&PrTab()}
+      ${tab==='PRs & Benchmarks'&&PrTab()}
       ${tab==='Create Session'&&GenerateTab()}
-      ${tab==='Import'&&ImportTab()}
     </div>
   </div>`;
 }
