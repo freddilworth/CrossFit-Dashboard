@@ -379,6 +379,31 @@ function Spark({vals,w=90,ht=24}){
       return html`<circle cx=${x} cy=${y} r=${i===vals.length-1?3:1.5} fill=${i===vals.length-1?'#E8871E':'#7CA0BE'}/>`;})}
   </svg>`;
 }
+function LineChart({vals,labels,fmt,color='#FF6B4A'}){
+  if(!vals||!vals.length)return html`<div style="color:#B8C1CC;font-size:12px;text-align:center;padding:12px">No data</div>`;
+  const n=vals.length;
+  const ml=44,mr=12,mt=14,mb=46,svgW=460,svgH=180;
+  const pw=svgW-ml-mr,ph=svgH-mt-mb;
+  const maxV=Math.max(...vals,1);
+  const xOf=i=>ml+(n<2?pw/2:i*pw/(n-1));
+  const yOf=v=>mt+ph*(1-v/maxV);
+  const fY=v=>fmt==='ton'?(v>=1000?(v/1000).toFixed(1)+'k':String(v)):fmt==='mi'?((v/1609).toFixed(1)+' mi'):String(v);
+  const pts=vals.map((v,i)=>xOf(i).toFixed(1)+','+yOf(v).toFixed(1)).join(' ');
+  const yTks=[0,Math.round(maxV/2),maxV];
+  return html`<svg viewBox="0 0 ${svgW} ${svgH}" width="100%" style="overflow:visible">
+    <line x1=${ml} x2=${svgW-mr} y1=${(svgH-mb).toFixed(1)} y2=${(svgH-mb).toFixed(1)} stroke="#E5E0D8" stroke-width="1"/>
+    ${yTks.map(t=>html`<g>
+      <line x1=${ml} x2=${svgW-mr} y1=${yOf(t).toFixed(1)} y2=${yOf(t).toFixed(1)} stroke="#E5E0D8" stroke-width="1"/>
+      <text x=${ml-6} y=${(yOf(t)+3.5).toFixed(1)} text-anchor="end" font-size="9" fill="#9BA3AC">${fY(t)}</text>
+    </g>`)}
+    <polyline points=${pts} fill="none" stroke=${color} stroke-width="2" stroke-linejoin="round"/>
+    ${vals.map((v,i)=>{const x=xOf(i),y=yOf(v);return html`<g>
+      <circle cx=${x.toFixed(1)} cy=${y.toFixed(1)} r="3.5" fill=${color} stroke="#FFFFFF" stroke-width="1.5"/>
+      ${v>0&&html`<text x=${x.toFixed(1)} y=${(y-8).toFixed(1)} text-anchor="middle" font-size="9" fill="#1E2A3A" font-weight="600">${fY(v)}</text>`}
+      <text transform="translate(${x.toFixed(1)},${(svgH-mb+12).toFixed(1)}) rotate(-40)" text-anchor="end" font-size="8" fill="#9BA3AC">${labels[i]||''}</text>
+    </g>`;})}
+  </svg>`;
+}
 function Delta({cur,prev}){
   if(prev===0&&cur===0)return html`<span class="delta delta-flat">—</span>`;
   if(prev===0)return html`<span class="delta delta-up">+NEW</span>`;
@@ -635,6 +660,7 @@ function App(){
   const[trendRng,setTrendRng]=useState('week');
   const[trendDrill,setTrendDrill]=useState(null);
   const[trendExpand,setTrendExpand]=useState(null);
+  const[metricDrill,setMetricDrill]=useState(null);
 
   useEffect(()=>{let c=false;
     const T=ms=>new Promise((_,r)=>setTimeout(r,ms));
@@ -1140,7 +1166,7 @@ function App(){
                 if(r.fn===null)return html`<tr><td colspan=${cols.length+1} style="padding:2px 0"><hr style="border:none;border-top:1px solid #E0D9CF;margin:0"/></td></tr>`;
                 const rv=vals[ri];
                 return html`<tr style="border-bottom:1px solid #E5E0D8">
-                  <td style="padding:5px 8px;color:#9BA3AC;white-space:nowrap">${r.label}</td>
+                  <td style="padding:5px 8px;color:#9BA3AC;white-space:nowrap;cursor:pointer" onClick=${()=>setMetricDrill({label:r.label,vals:rv,fmt:r.fmt})} title="View trend">${r.label} <span style="font-size:8px;opacity:.35">↗</span></td>
                   ${rv.map((v,ci)=>html`<td style=${{textAlign:'right',padding:'5px 8px',fontWeight:ci===0?'700':'400',color:'#1E2A3A'}}>
                     ${fmtVal(v,r.fmt)}
                   </td>`)}
@@ -1174,6 +1200,24 @@ function App(){
             </div>`;})}</div>`;
         })()}
       </div>
+      <div class="card"><div class="ct">Movement Detail</div>
+        <div style="overflow-y:auto;max-height:480px">
+        <table style="position:relative"><thead style="position:sticky;top:0;background:#FFFFFF;z-index:1"><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
+          const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
+          return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#1E2A3A':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
+        })}</tr></thead>
+        <tbody>${mvTbl.map(m=>html`<tr>
+          <td>${m.n}</td>
+          <td><span style="font-size:10px;font-weight:600;color:${PATS[m.pat]?.c||'#9BA3AC'}">${PATS[m.pat]?.l||(m.pat||'-')}</span>${m.sub?html`<span class="mut" style="margin-left:3px">${m.sub}</span>`:''}</td>
+          <td><span style="font-size:10px;font-weight:600;color:${MODS[m.mod]?.c||'#9BA3AC'}">${MODS[m.mod]?.l||(m.mod||'-')}</span></td>
+          <td style="text-align:right">${m.freq}</td>
+          <td style="text-align:right;font-weight:600">${m.reps}</td>
+          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps):'-'}</td>
+          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
+          <td class="mut">${fd(m.last)}</td>
+        </tr>`)}</tbody></table>
+        </div>
+      </div>
       <div class="card">
         <div class="ct">Last 7 Days</div>
         ${last7.map(({date,session:s})=>{
@@ -1201,24 +1245,6 @@ function App(){
           </div>`;
         })}
       </div>
-      <div class="card"><div class="ct">Movement Detail</div>
-        <div style="overflow-y:auto;max-height:480px">
-        <table style="position:relative"><thead style="position:sticky;top:0;background:#FFFFFF;z-index:1"><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
-          const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
-          return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#1E2A3A':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
-        })}</tr></thead>
-        <tbody>${mvTbl.map(m=>html`<tr>
-          <td>${m.n}</td>
-          <td><span style="font-size:10px;font-weight:600;color:${PATS[m.pat]?.c||'#9BA3AC'}">${PATS[m.pat]?.l||(m.pat||'-')}</span>${m.sub?html`<span class="mut" style="margin-left:3px">${m.sub}</span>`:''}</td>
-          <td><span style="font-size:10px;font-weight:600;color:${MODS[m.mod]?.c||'#9BA3AC'}">${MODS[m.mod]?.l||(m.mod||'-')}</span></td>
-          <td style="text-align:right">${m.freq}</td>
-          <td style="text-align:right;font-weight:600">${m.reps}</td>
-          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps):'-'}</td>
-          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
-          <td class="mut">${fd(m.last)}</td>
-        </tr>`)}</tbody></table>
-        </div>
-      </div>
       <div class="card">
         ${CardHead({title:'Pattern Sub-Category Detail',rng:subRng,setRng:setSubRng})}
         <div style="font-size:12px;line-height:2">
@@ -1229,6 +1255,23 @@ function App(){
           <div><b>Carries/Holds:</b> ${subAgg.mF.carries||0} sessions</div>
         </div>
       </div>
+      ${metricDrill&&(()=>{
+        const data=[...metricDrill.vals].reverse().map(v=>v||0);
+        const lbls=[...trendPeriods].map(c=>c.label).reverse();
+        const rngLabel={week:'Weekly',month:'Monthly',quarter:'Quarterly',year:'Yearly',all:'All time'}[trendRng]||trendRng;
+        return html`<div style="position:fixed;inset:0;background:rgba(30,42,58,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px" onClick=${()=>setMetricDrill(null)}>
+          <div style="background:#FFFFFF;border-radius:12px;padding:20px 22px;width:100%;max-width:520px;box-shadow:0 12px 48px rgba(0,0,0,.2)" onClick=${e=>e.stopPropagation()}>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+              <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1E2A3A">${metricDrill.label}</div>
+                <div style="font-size:10px;color:#9BA3AC;margin-top:2px">${rngLabel}</div>
+              </div>
+              <button onClick=${()=>setMetricDrill(null)} style="background:none;border:none;font-size:20px;color:#B8C1CC;cursor:pointer;line-height:1;padding:0 0 4px 8px">×</button>
+            </div>
+            <${LineChart} vals=${data} labels=${lbls} fmt=${metricDrill.fmt}/>
+          </div>
+        </div>`;
+      })()}
     </div>`;
   }
 
