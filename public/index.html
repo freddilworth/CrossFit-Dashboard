@@ -12,7 +12,7 @@ body{font-family:'Inter',sans-serif;background:#FDFBF6;color:#2B2825;min-height:
 .hdr h1{font-size:18px;font-weight:700;letter-spacing:1px;color:#2B2825}
 .hdr .sub{font-size:10px;color:#9BA3AC;letter-spacing:2px;text-transform:uppercase;margin-top:1px}
 .logo{width:30px;height:30px;background:#FF6B4A;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff}
-.nav{display:flex;gap:2px;padding:8px 20px;background:#FDFBF6;border-bottom:0.5px solid #D0C9BC;flex-wrap:wrap}
+.nav{display:flex;gap:2px;padding:8px 20px;background:#FFFFFF;border-bottom:0.5px solid #D0C9BC;flex-wrap:wrap}
 .nav button{padding:7px 15px 5px;border-radius:6px;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9BA3AC;font-family:inherit}
 .nav button.act{background:transparent;color:#FF6B4A;border-bottom:2px solid #FF6B4A;border-radius:0;padding-bottom:5px}
 .bod{padding:20px 24px;max-width:1100px;margin:0 auto}
@@ -1553,7 +1553,7 @@ function App(){
   const tabs=['Home','Sessions','PRs & Benchmarks','Create Session'];
 
   return html`<div>
-    <div class="hdr"><div class="logo">⚡</div><div><h1>CROSSFIT DASHBOARD</h1><div class="sub">Volume · Analytics · PRs</div></div></div>
+    <div class="hdr"><div class="logo">⚡</div><div><h1>Crossfit Dashboard</h1></div></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
     <div class="bod">
       ${tab==='Home'&&HomeTab()}
