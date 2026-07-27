@@ -1109,12 +1109,6 @@ function App(){
             if(fmt==='mi')return(v/1609).toFixed(1)+' mi';
             return v;
           };
-          const dc=(cur,prev)=>{
-            if(prev===undefined||prev===null)return'';
-            if(cur>prev)return'#10B981';
-            if(cur<prev)return'#A6293A';
-            return'#B8C1CC';
-          };
           const rows=[
             {label:'Sessions',fn:d=>d.cnt,fmt:'n'},
             {label:'Tonnage',fn:d=>Math.round(d.primaryTon||0),fmt:'ton'},
@@ -1145,7 +1139,7 @@ function App(){
                 const rv=vals[ri];
                 return html`<tr style="border-bottom:1px solid #E5E0D8">
                   <td style="padding:5px 8px;color:#9BA3AC;white-space:nowrap">${r.label}</td>
-                  ${rv.map((v,ci)=>html`<td style=${{textAlign:'right',padding:'5px 8px',fontWeight:ci===0?'700':'400',color:ci===0?dc(v,rv[1]):(ci<rv.length-1?dc(v,rv[ci+1]):'#B8C1CC')}}>
+                  ${rv.map((v,ci)=>html`<td style=${{textAlign:'right',padding:'5px 8px',fontWeight:ci===0?'700':'400',color:'#1E2A3A'}}>
                     ${fmtVal(v,r.fmt)}
                   </td>`)}
                 </tr>`;
