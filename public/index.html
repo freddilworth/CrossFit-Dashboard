@@ -674,20 +674,22 @@ function App(){
 
   // Trend table periods
   const TREND_COUNTS={week:8,month:6,quarter:4,year:3};
+  function localISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function calCalWeek(offset){
     const now=new Date();const day=now.getDay();
     const toMon=day===0?-6:1-day;
     const mon=new Date(now);mon.setDate(now.getDate()+toMon-offset*7);
     const sun=new Date(mon);sun.setDate(mon.getDate()+6);
-    return{start:mon.toISOString().slice(0,10),end:sun.toISOString().slice(0,10)};
+    return{start:localISO(mon),end:localISO(sun)};
   }
   function trendPeriod(type,offset){return type==='week'?calCalWeek(offset):calPeriod(type,offset);}
   function trendLabel(type,offset){
     const{start,end}=trendPeriod(type,offset);
     if(type==='week'){
       const s=new Date(start+'T12:00:00'),e=new Date(end+'T12:00:00');
-      const sm=s.toLocaleDateString('en-US',{month:'short'});const sd=s.getDate();const ed=e.getDate();
-      return sm+' '+sd+'–'+ed;
+      const sm=s.toLocaleDateString('en-US',{month:'short'});const em=e.toLocaleDateString('en-US',{month:'short'});
+      const sd=s.getDate();const ed=e.getDate();
+      return s.getMonth()===e.getMonth()?sm+' '+sd+'–'+ed:sm+' '+sd+'–'+em+' '+ed;
     }
     if(type==='month'){const d=new Date(start+'T12:00:00');return d.toLocaleDateString('en-US',{month:'short',year:'numeric'});}
     if(type==='quarter'){const d=new Date(start+'T12:00:00');return'Q'+(Math.floor(d.getMonth()/3)+1)+' '+d.getFullYear();}
