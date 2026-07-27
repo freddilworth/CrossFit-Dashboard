@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CrossFit Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#FDFBF6;color:#2B2825;min-height:100vh}
 .hdr{background:#FDFBF6;border-bottom:0.5px solid #D0C9BC;padding:14px 24px;display:flex;align-items:center;gap:12px}
-.hdr h1{font-size:18px;font-weight:700;letter-spacing:1px;color:#2B2825}
-.hdr .sub{font-size:10px;color:#9BA3AC;letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.hdr h1{font-size:20px;font-weight:700;letter-spacing:0.3px;color:#2B2825;font-family:'Outfit',sans-serif;line-height:1.1}
+.hdr .sub{font-size:10px;font-weight:500;color:#9BA3AC;letter-spacing:3px;text-transform:uppercase;margin-top:1px;font-family:'Outfit',sans-serif}
 .nav{display:flex;gap:2px;padding:8px 20px;background:#FFFFFF;border-bottom:0.5px solid #D0C9BC;flex-wrap:wrap}
 .nav button{padding:7px 15px 5px;border-radius:6px;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9BA3AC;font-family:inherit}
 .nav button.act{background:transparent;color:#FF6B4A;border-bottom:2px solid #FF6B4A;border-radius:0;padding-bottom:5px}
@@ -1552,7 +1552,7 @@ function App(){
   const tabs=['Home','Sessions','PRs & Benchmarks','Create Session'];
 
   return html`<div>
-    <div class="hdr"><svg viewBox="16 -4 336 262" height="38" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="cg" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#FFA184"/><stop offset="52%" stop-color="#FF765F"/><stop offset="100%" stop-color="#FF5E4D"/></linearGradient></defs><g transform="translate(8 4) scale(0.94)" fill="url(#cg)"><path d="M 14 256 C 15 244, 27 234, 41 232 L 60 232 C 70 232, 77 240, 77 249 C 77 257, 71 262, 61 262 L 26 262 C 18 262, 13 260, 14 256 Z"/><path d="M 91 246 L 106 185 C 110 166, 126 153, 145 153 C 166 153, 180 171, 176 191 L 162 246 C 159 257, 149 264, 137 264 L 111 264 C 97 264, 88 257, 91 246 Z"/><path d="M 173 231 L 193 142 C 197 122, 214 108, 234 108 C 255 108, 270 127, 266 147 L 247 231 C 244 248, 230 260, 213 260 L 192 260 C 178 260, 170 249, 173 231 Z"/><path d="M 257 207 L 283 89 C 287 69, 304 55, 324 55 C 345 55, 360 74, 356 94 L 331 207 C 327 226, 311 240, 292 240 L 275 240 C 262 240, 254 226, 257 207 Z"/><path d="M 344 19 A 24 24 0 1 1 296 19 A 24 24 0 1 1 344 19 Z"/></g></svg><div><h1>CrossFit Dashboard</h1></div></div>
+    <div class="hdr"><svg viewBox="16 -4 336 262" height="38" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="cg" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#FFA184"/><stop offset="52%" stop-color="#FF765F"/><stop offset="100%" stop-color="#FF5E4D"/></linearGradient></defs><g transform="translate(8 4) scale(0.94)" fill="url(#cg)"><path d="M 14 256 C 15 244, 27 234, 41 232 L 60 232 C 70 232, 77 240, 77 249 C 77 257, 71 262, 61 262 L 26 262 C 18 262, 13 260, 14 256 Z"/><path d="M 91 246 L 106 185 C 110 166, 126 153, 145 153 C 166 153, 180 171, 176 191 L 162 246 C 159 257, 149 264, 137 264 L 111 264 C 97 264, 88 257, 91 246 Z"/><path d="M 173 231 L 193 142 C 197 122, 214 108, 234 108 C 255 108, 270 127, 266 147 L 247 231 C 244 248, 230 260, 213 260 L 192 260 C 178 260, 170 249, 173 231 Z"/><path d="M 257 207 L 283 89 C 287 69, 304 55, 324 55 C 345 55, 360 74, 356 94 L 331 207 C 327 226, 311 240, 292 240 L 275 240 C 262 240, 254 226, 257 207 Z"/><path d="M 344 19 A 24 24 0 1 1 296 19 A 24 24 0 1 1 344 19 Z"/></g></svg><div><h1>CrossFit</h1><div class="sub">Dashboard</div></div></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
     <div class="bod">
       ${tab==='Home'&&HomeTab()}
