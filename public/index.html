@@ -7,22 +7,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#FDFBF6;color:#1E2A3A;min-height:100vh}
-.hdr{background:#1E2A3A;padding:14px 24px;display:flex;align-items:center;gap:12px}
-.hdr h1{font-size:18px;font-weight:700;letter-spacing:1px;color:#fff}
-.hdr .sub{font-size:10px;color:#B4C3D5;letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+body{font-family:'Inter',sans-serif;background:#FDFBF6;color:#2B2825;min-height:100vh}
+.hdr{background:#FDFBF6;border-bottom:0.5px solid #D0C9BC;padding:14px 24px;display:flex;align-items:center;gap:12px}
+.hdr h1{font-size:18px;font-weight:700;letter-spacing:1px;color:#2B2825}
+.hdr .sub{font-size:10px;color:#9BA3AC;letter-spacing:2px;text-transform:uppercase;margin-top:1px}
 .logo{width:30px;height:30px;background:#FF6B4A;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff}
-.nav{display:flex;gap:2px;padding:8px 20px;background:#FDFBF6;border-bottom:1px solid #D0C9BC;flex-wrap:wrap}
-.nav button{padding:7px 15px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9BA3AC;font-family:inherit}
-.nav button.act{background:#1E2A3A;color:#fff}
+.nav{display:flex;gap:2px;padding:8px 20px;background:#FDFBF6;border-bottom:0.5px solid #D0C9BC;flex-wrap:wrap}
+.nav button{padding:7px 15px 5px;border-radius:6px;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9BA3AC;font-family:inherit}
+.nav button.act{background:transparent;color:#FF6B4A;border-bottom:2px solid #FF6B4A;border-radius:0;padding-bottom:5px}
 .bod{padding:20px 24px;max-width:1100px;margin:0 auto}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
 .card{background:#FFFFFF;border:1px solid #D0C9BC;border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.ct{font-size:10px;font-weight:700;color:#1E2A3A;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-bottom:2px solid #E0D9CF;padding-bottom:8px}
+.ct{font-size:10px;font-weight:700;color:#2B2825;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-bottom:2px solid #E0D9CF;padding-bottom:8px}
 .sc{background:#FFFFFF;border:1px solid #D0C9BC;border-radius:10px;padding:16px;text-align:center}
-.sv{font-size:26px;font-weight:700;color:#1E2A3A;line-height:1}
+.sv{font-size:26px;font-weight:700;color:#2B2825;line-height:1}
 .sl{font-size:9px;color:#9BA3AC;letter-spacing:2px;text-transform:uppercase;margin-top:5px;font-weight:600}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;padding:6px 8px;font-size:10px;color:#9BA3AC;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #D0C9BC}
@@ -30,27 +30,27 @@ td{padding:7px 8px;font-size:12px;border-bottom:1px solid #D0C9BC}
 tr:nth-child(even) td{background:#F6F5F2}
 .prv{font-weight:700;color:#FF6B4A;font-size:13px}
 .mut{color:#9BA3AC;font-size:10px}
-.inp{background:#FFFFFF;border:1px solid #D0C9BC;color:#1E2A3A;border-radius:6px;padding:7px 10px;font-size:12px;width:100%;box-sizing:border-box;outline:none;font-family:inherit}
+.inp{background:#FFFFFF;border:1px solid #D0C9BC;color:#2B2825;border-radius:6px;padding:7px 10px;font-size:12px;width:100%;box-sizing:border-box;outline:none;font-family:inherit}
 textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
-.btn{background:#1E2A3A;color:#fff;border:none;border-radius:6px;padding:9px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+.btn{background:#2B2825;color:#fff;border:none;border-radius:6px;padding:9px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .rn{padding:4px 10px;border-radius:4px;border:1px solid #D0C9BC;background:transparent;color:#9BA3AC;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
-.rn.act{border-color:#1E2A3A;background:#1E2A3A;color:#fff}
+.rn.act{border-color:#2B2825;background:#2B2825;color:#fff}
 .badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px}
 .badge-rx{background:#D2F5E9;color:#10B981}
 .badge-sc{background:#F6E0E3;color:#A6293A}
 .kb{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase;display:inline-block}
 .kb-str{background:#F6E0E3;color:#A6293A}
-.kb-met{background:#EEF3F8;color:#1E2A3A}
+.kb-met{background:#EEF3F8;color:#2B2825}
 .kb-acc{background:#FCECD5;color:#E8871E}
 .bc{border:1px solid #D0C9BC;border-radius:7px;padding:10px;margin-bottom:8px;background:#FFFFFF}
 .sr{padding:10px 14px;border-radius:7px;margin-bottom:5px;background:#FFFFFF;border:1px solid #D0C9BC;cursor:pointer}
-.sr.open{background:#EEF3F8;border-color:#1E2A3A;border-radius:7px 7px 0 0;margin-bottom:0}
+.sr.open{background:#EEF3F8;border-color:#2B2825;border-radius:7px 7px 0 0;margin-bottom:0}
 .sd{padding:12px 14px 4px;margin-bottom:8px;background:#FFFFFF;border:1px solid #D0C9BC;border-top:none;border-radius:0 0 7px 7px}
 .set-chip{background:#FFFFFF;border:1px solid #D0C9BC;border-radius:3px;padding:3px 7px;font-size:11px;font-family:monospace;display:inline-block;margin:2px}
 .err{background:#F6E0E3;color:#A6293A;padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px}
 .ok{color:#10B981;font-size:12px;font-weight:600;margin-top:8px}
-.spin{display:inline-block;width:16px;height:16px;border:2px solid #D0C9BC;border-top-color:#1E2A3A;border-radius:50%;animation:sp .6s linear infinite}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #D0C9BC;border-top-color:#2B2825;border-radius:50%;animation:sp .6s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .ratio-card{text-align:center;padding:14px;background:#FFFFFF;border:1px solid #D0C9BC;border-radius:10px}
 .ratio-val{font-size:22px;font-weight:700;line-height:1}
@@ -299,7 +299,7 @@ function clsAllCached(nm){
 
 // ══════ METADATA ══════
 const PATS={push:{l:'Push',c:'#FF5D73'},pull:{l:'Pull',c:'#4FA8D8'},squat:{l:'Squat',c:'#FFC145'},hinge:{l:'Hinge',c:'#84CC16'},core:{l:'Core',c:'#A78BFA'}};
-const MODS={weightlifting:{l:'Weightlifting',c:'#E8871E'},gymnastics:{l:'Gymnastics',c:'#4FA8D8'},monostructural:{l:'Monostructural',c:'#9BA3AC'},carries:{l:'Carries/Holds',c:'#3E7B75'}};
+const MODS={weightlifting:{l:'Weightlifting',c:'#FFC145'},gymnastics:{l:'Gymnastics',c:'#4FA8D8'},monostructural:{l:'Monostructural',c:'#9BA3AC'},carries:{l:'Carries/Holds',c:'#A78BFA'}};
 const PK=Object.keys(PATS);
 const MK=Object.keys(MODS);
 
@@ -348,7 +348,7 @@ function HBar({data,w=380,ht=180}){
   const mx=Math.max(...data.map(d=>d.val),1);const bh=Math.min(22,ht/data.length-4);const lw=80;
   return html`<svg width=${w} height=${Math.max(ht,data.length*(bh+4)+8)} style="display:block;max-width:100%">
     ${data.map((d,i)=>{const y=i*(bh+4)+4;const bw=Math.max(2,(d.val/mx)*(w-lw-60));
-      return html`<g><text x=${lw-6} y=${y+bh/2+4} text-anchor="end" font-size="11" fill="#1E2A3A">${d.label}</text>
+      return html`<g><text x=${lw-6} y=${y+bh/2+4} text-anchor="end" font-size="11" fill="#2B2825">${d.label}</text>
         <rect x=${lw} y=${y} width=${bw} height=${bh} rx="3" fill=${d.color||'#7CA0BE'}/>
         <text x=${lw+bw+6} y=${y+bh/2+4} font-size="11" fill="#9BA3AC">${d.val>=1000?(d.val/1000).toFixed(1)+'k':d.val}</text></g>`;})}
   </svg>`;
@@ -399,7 +399,7 @@ function LineChart({vals,labels,fmt,color='#FF6B4A'}){
     <polyline points=${pts} fill="none" stroke=${color} stroke-width="2" stroke-linejoin="round"/>
     ${vals.map((v,i)=>{const x=xOf(i),y=yOf(v);return html`<g>
       <circle cx=${x.toFixed(1)} cy=${y.toFixed(1)} r="3.5" fill=${color} stroke="#FFFFFF" stroke-width="1.5"/>
-      ${v>0&&html`<text x=${x.toFixed(1)} y=${(y-8).toFixed(1)} text-anchor="middle" font-size="9" fill="#1E2A3A" font-weight="600">${fY(v)}</text>`}
+      ${v>0&&html`<text x=${x.toFixed(1)} y=${(y-8).toFixed(1)} text-anchor="middle" font-size="9" fill="#2B2825" font-weight="600">${fY(v)}</text>`}
       <text transform="translate(${x.toFixed(1)},${(svgH-mb+12).toFixed(1)}) rotate(-40)" text-anchor="end" font-size="8" fill="#9BA3AC">${labels[i]||''}</text>
     </g>`;})}
   </svg>`;
@@ -898,7 +898,7 @@ function App(){
   const RNGS=[['week','W'],['month','M'],['quarter','Q'],['year','Y'],['all','All']];
   function CardHead({title,rng,setRng}){
     return html`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E0D9CF;padding-bottom:8px">
-      <span style="font-size:10px;font-weight:700;color:#1E2A3A;letter-spacing:2px;text-transform:uppercase">${title}</span>
+      <span style="font-size:10px;font-weight:700;color:#2B2825;letter-spacing:2px;text-transform:uppercase">${title}</span>
       <div style="display:flex;gap:3px">${RNGS.map(([k,l])=>
         html`<button class="rn ${rng===k?'act':''}" style="padding:2px 7px;font-size:10px" onClick=${()=>setRng(k)}>${l}</button>`)}</div>
     </div>`;
@@ -930,13 +930,13 @@ function App(){
           ${restDay&&html`<div style="font-size:10px;margin-top:6px;opacity:.8">Last rest: ${restDaysAgo}d ago · ${fds(restDay)}</div>`}
         </div>
         <div class="ratio-card" style="padding:10px">
-          <div style="font-size:9px;font-weight:700;color:#1E2A3A;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Performance Satisfaction</div>
+          <div style="font-size:9px;font-weight:700;color:#2B2825;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Performance Satisfaction</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${happyRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setHappyRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="text-align:center;color:${happyRate===null?'#B8C1CC':happyRate>=60?'#10B981':happyRate>=40?'#E8871E':'#A6293A'}">${happyRate===null?'—':happyRate+'%'}</div>
           <div class="ratio-lbl" style="text-align:center">Satisfied</div>
         </div>
         <div class="ratio-card" style="padding:10px">
-          <div style="font-size:9px;font-weight:700;color:#1E2A3A;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Enjoyment</div>
+          <div style="font-size:9px;font-weight:700;color:#2B2825;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Enjoyment</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${funRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setFunRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="text-align:center;color:${funRate===null?'#B8C1CC':funRate>=60?'#10B981':funRate>=40?'#E8871E':'#A6293A'}">${funRate===null?'—':funRate+'%'}</div>
           <div class="ratio-lbl" style="text-align:center">Had Fun</div>
@@ -1018,7 +1018,7 @@ function App(){
           <div class="sr ${o?'open':''}" onClick=${()=>{setExp(o?null:s.date);if(o)closeEdit();}}>
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-weight:700;font-size:12px;color:#1E2A3A">${fd(s.date)}</span>
+                <span style="font-weight:700;font-size:12px;color:#2B2825">${fd(s.date)}</span>
                 ${s.happiness&&html`<span class="mut" style="font-size:10px">${hLabel[s.happiness]||''}</span>`}
                 ${s.fun&&html`<span class="mut" style="font-size:10px">· ${fLabel[s.fun]||''}</span>`}
               </div>
@@ -1071,7 +1071,7 @@ function App(){
               </div>
             </div>`}
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 4px">
-              ${!ed&&html`<button style="background:transparent;color:#1E2A3A;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${openEdit}>Edit</button>`}
+              ${!ed&&html`<button style="background:transparent;color:#2B2825;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${openEdit}>Edit</button>`}
               ${ed&&html`<div></div>`}
               <button style="background:transparent;color:#A6293A;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{if(confirm('Delete?')){sbDel('sessions','date=eq.'+s.date);setSess(p=>p.filter(x=>x.date!==s.date));}}}>Delete</button>
             </div>
@@ -1100,7 +1100,7 @@ function App(){
     const patTD=PK.map(k=>({label:PATS[k].l,val:volAgg.pT[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
     const modFD=MK.map(k=>({label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const modTD=MK.map(k=>({label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
-    const tdD=[{label:'Short (<10m)',val:volAgg.td.short,color:'#FF5D73'},{label:'Medium (10-20m)',val:volAgg.td.med,color:'#4FA8D8'},{label:'Long (20m+)',val:volAgg.td.long,color:'#1E2A3A'}];
+    const tdD=[{label:'Short (<10m)',val:volAgg.td.short,color:'#FF5D73'},{label:'Medium (10-20m)',val:volAgg.td.med,color:'#4FA8D8'},{label:'Long (20m+)',val:volAgg.td.long,color:'#2B2825'}];
     const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0);
 
     return html`<div>
@@ -1160,14 +1160,14 @@ function App(){
             <table style="width:100%;border-collapse:collapse;font-size:11px">
               <thead><tr>
                 <th style="text-align:left;padding:5px 8px;color:#9BA3AC;font-weight:600;white-space:nowrap;min-width:110px">Metric</th>
-                ${cols.map(c=>html`<th style=${{textAlign:'right',padding:'5px 8px',fontWeight:'600',whiteSpace:'nowrap',cursor:'pointer',userSelect:'none',color:trendDrill?.label===c.label?'#1E2A3A':'#9BA3AC'}} onClick=${()=>{const{start,end}=trendPeriod(trendRng,cols.indexOf(c));setTrendDrill(trendDrill?.label===c.label?null:{start,end,label:c.label});setTrendExpand(null);}} title="View sessions">${c.label} <span style="font-size:9px;opacity:.4">${trendDrill?.label===c.label?'▼':'↓'}</span></th>`)}
+                ${cols.map(c=>html`<th style=${{textAlign:'right',padding:'5px 8px',fontWeight:'600',whiteSpace:'nowrap',cursor:'pointer',userSelect:'none',color:trendDrill?.label===c.label?'#2B2825':'#9BA3AC'}} onClick=${()=>{const{start,end}=trendPeriod(trendRng,cols.indexOf(c));setTrendDrill(trendDrill?.label===c.label?null:{start,end,label:c.label});setTrendExpand(null);}} title="View sessions">${c.label} <span style="font-size:9px;opacity:.4">${trendDrill?.label===c.label?'▼':'↓'}</span></th>`)}
               </tr></thead>
               <tbody>${rows.map((r,ri)=>{
                 if(r.fn===null)return html`<tr><td colspan=${cols.length+1} style="padding:2px 0"><hr style="border:none;border-top:1px solid #E0D9CF;margin:0"/></td></tr>`;
                 const rv=vals[ri];
                 return html`<tr style="border-bottom:1px solid #E5E0D8">
                   <td style="padding:5px 8px;color:#9BA3AC;white-space:nowrap;cursor:pointer" onClick=${()=>setMetricDrill({label:r.label,vals:rv,fmt:r.fmt})} title="View trend">${r.label} <span style="font-size:8px;opacity:.35">↗</span></td>
-                  ${rv.map((v,ci)=>html`<td style=${{textAlign:'right',padding:'5px 8px',fontWeight:ci===0?'700':'400',color:'#1E2A3A'}}>
+                  ${rv.map((v,ci)=>html`<td style=${{textAlign:'right',padding:'5px 8px',fontWeight:ci===0?'700':'400',color:'#2B2825'}}>
                     ${fmtVal(v,r.fmt)}
                   </td>`)}
                 </tr>`;
@@ -1179,7 +1179,7 @@ function App(){
           const ds=sess.filter(s=>s.date>=trendDrill.start&&s.date<=trendDrill.end);
           return html`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #E0D9CF">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <div style="font-size:11px;font-weight:700;color:#1E2A3A">${trendDrill.label} · ${ds.length} session${ds.length!==1?'s':''}</div>
+              <div style="font-size:11px;font-weight:700;color:#2B2825">${trendDrill.label} · ${ds.length} session${ds.length!==1?'s':''}</div>
               <div style="display:flex;align-items:center;gap:10px">
                 <button onClick=${()=>drillToSessions(trendDrill.start,trendDrill.end,trendDrill.label)} style="font-size:10px;font-weight:600;color:#7CA0BE;background:transparent;border:none;cursor:pointer;font-family:inherit">View in Sessions →</button>
                 <button onClick=${()=>{setTrendDrill(null);setTrendExpand(null);}} style="font-size:10px;font-weight:600;color:#9BA3AC;background:transparent;border:none;cursor:pointer;font-family:inherit">✕</button>
@@ -1189,7 +1189,7 @@ function App(){
             ds.map(s=>{const isOpen=trendExpand===s.date;return html`<div>
               <div class="sr ${isOpen?'open':''}" onClick=${()=>setTrendExpand(isOpen?null:s.date)}>
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                  <span style="font-weight:700;font-size:12px;color:#1E2A3A">${fd(s.date)}</span>
+                  <span style="font-weight:700;font-size:12px;color:#2B2825">${fd(s.date)}</span>
                   <div style="display:flex;gap:3px;align-items:center">
                     ${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k==='strength'?'str':b.k==='metcon'?'met':'acc'}">${{strength:'STR',metcon:'MET',accessory:'ACC'}[b.k]||b.k}</span>`)}
                     <span style="margin-left:6px;color:#9BA3AC;font-size:12px">${isOpen?'▲':'▼'}</span>
@@ -1204,7 +1204,7 @@ function App(){
         <div style="overflow-y:auto;max-height:480px">
         <table style="position:relative"><thead style="position:sticky;top:0;background:#FFFFFF;z-index:1"><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
           const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
-          return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#1E2A3A':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
+          return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#2B2825':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
         })}</tr></thead>
         <tbody>${mvTbl.map(m=>html`<tr>
           <td>${m.n}</td>
@@ -1229,7 +1229,7 @@ function App(){
           const pats=sessPatterns(s);const td=sessTd(s);
           return html`<div>
             <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid ${isOpen?'transparent':'#D0C9BC'};cursor:pointer" onClick=${()=>setExpandDay(isOpen?null:date)}>
-              <span style="width:72px;flex-shrink:0;font-size:12px;font-weight:700;color:#1E2A3A">${fds(date)}</span>
+              <span style="width:72px;flex-shrink:0;font-size:12px;font-weight:700;color:#2B2825">${fds(date)}</span>
               ${td&&html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${tdColor[td]+'22'};color:${tdColor[td]}">${tdLabel[td]}</span>`}
               <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">
                 ${pats.map(p=>html`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${(PATS[p]?.c||'#ccc')+'22'};color:${PATS[p]?.c||'#ccc'}">${PATS[p]?.l||p}</span>`)}
@@ -1263,7 +1263,7 @@ function App(){
           <div style="background:#FFFFFF;border-radius:12px;padding:20px 22px;width:100%;max-width:520px;box-shadow:0 12px 48px rgba(0,0,0,.2)" onClick=${e=>e.stopPropagation()}>
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
               <div>
-                <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1E2A3A">${metricDrill.label}</div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#2B2825">${metricDrill.label}</div>
                 <div style="font-size:10px;color:#9BA3AC;margin-top:2px">${rngLabel}</div>
               </div>
               <button onClick=${()=>setMetricDrill(null)} style="background:none;border:none;font-size:20px;color:#B8C1CC;cursor:pointer;line-height:1;padding:0 0 4px 8px">×</button>
@@ -1283,7 +1283,7 @@ function App(){
       <td class="prv">${pr.pr_display||pr.pr_value} ${unit}</td>
       <td class="mut">${fd(pr.date)}</td>
       <td style="text-align:right">
-        ${!editing&&html`<button style="background:transparent;color:#1E2A3A;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{setEditPrId(pr.id);setEditPrVal('');setEditPrDate(new Date().toISOString().slice(0,10));}}>Update</button>`}
+        ${!editing&&html`<button style="background:transparent;color:#2B2825;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>{setEditPrId(pr.id);setEditPrVal('');setEditPrDate(new Date().toISOString().slice(0,10));}}>Update</button>`}
         ${editing&&html`<div style="display:flex;gap:4px;align-items:center;justify-content:flex-end">
           <input class="inp" style="width:80px;padding:4px 6px;font-size:11px" placeholder=${pr.pr_display||pr.pr_value} value=${editPrVal} onInput=${e=>setEditPrVal(e.target.value)}/>
           <input type="date" class="inp" style="width:120px;padding:4px 6px;font-size:11px" value=${editPrDate} onInput=${e=>setEditPrDate(e.target.value)}/>
@@ -1295,7 +1295,7 @@ function App(){
   }
   function PrTab(){
     const BmForm=()=>html`<div style="background:#FFFFFF;border:1px solid #D0C9BC;border-radius:8px;padding:14px;margin-bottom:14px">
-      <div style="font-size:10px;font-weight:700;color:#1E2A3A;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">${bench.find(b=>b.name.toLowerCase()===bmName.toLowerCase())?'Add Score — '+bmName:'New Benchmark'}</div>
+      <div style="font-size:10px;font-weight:700;color:#2B2825;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">${bench.find(b=>b.name.toLowerCase()===bmName.toLowerCase())?'Add Score — '+bmName:'New Benchmark'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <div style="flex:1;min-width:140px"><label style="font-size:9px;color:#9BA3AC;letter-spacing:1px;text-transform:uppercase;font-weight:600;display:block;margin-bottom:4px">Benchmark Name</label>
           <input class="inp" placeholder="e.g. Kelly, Fran, DT..." value=${bmName} onInput=${e=>setBmName(e.target.value)}/></div>
@@ -1363,8 +1363,8 @@ function App(){
         ${bmOpen&&BmForm()}
         ${bench.map(b=>html`<div style="margin-bottom:16px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-weight:700;font-size:12px;color:#1E2A3A">${b.name}</span>
-            <button style="background:transparent;color:#1E2A3A;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>openAddBenchmark(b.name,'')}>+ Add Score</button>
+            <span style="font-weight:700;font-size:12px;color:#2B2825">${b.name}</span>
+            <button style="background:transparent;color:#2B2825;border:none;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>openAddBenchmark(b.name,'')}>+ Add Score</button>
           </div>
           <table><thead><tr><th>Date</th><th>Score</th><th>Notes</th></tr></thead>
           <tbody>${(b.scores||[]).map(s=>html`<tr>
@@ -1412,8 +1412,8 @@ function App(){
             whiteSpace:'pre-wrap',
             fontSize:'12px',
             lineHeight:'1.75',
-            color:'#1E2A3A',
-            borderLeft:m.role==='assistant'?'3px solid #1E2A3A':'3px solid #B4C3D5'
+            color:'#2B2825',
+            borderLeft:m.role==='assistant'?'3px solid #2B2825':'3px solid #B4C3D5'
           }}>
             ${m.role==='user'&&html`<div style="font-size:9px;font-weight:700;color:#B4C3D5;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">You</div>`}
             ${m.content}
@@ -1518,7 +1518,7 @@ function App(){
           </div>
           <div style="max-height:280px;overflow-y:auto;margin-bottom:14px;border:1px solid #D0C9BC;border-radius:7px">
             ${impRows.map(({date,entries})=>html`<div style="padding:8px 12px;border-bottom:1px solid #D0C9BC;display:flex;gap:12px;align-items:baseline">
-              <span style="font-weight:700;font-size:11px;color:#1E2A3A;white-space:nowrap;flex:0 0 90px">${fd(date)}</span>
+              <span style="font-weight:700;font-size:11px;color:#2B2825;white-space:nowrap;flex:0 0 90px">${fd(date)}</span>
               <span style="font-size:11px;color:#9BA3AC;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${entries.map(e=>e.desc.split('\n')[0].trim()).join(' · ')}</span>
             </div>`)}
           </div>
@@ -1530,7 +1530,7 @@ function App(){
         ${impImporting&&html`<div>
           <div style="font-size:12px;color:#9BA3AC;margin-bottom:8px">Importing ${impDone} of ${impTotal} sessions...</div>
           <div style="background:#D0C9BC;border-radius:4px;height:10px;margin-bottom:12px;overflow:hidden">
-            <div style=${{background:'#1E2A3A',height:'10px',width:pct+'%',transition:'width .4s',borderRadius:'4px'}}></div>
+            <div style=${{background:'#2B2825',height:'10px',width:pct+'%',transition:'width .4s',borderRadius:'4px'}}></div>
           </div>
           ${impErrs.length>0&&html`<div class="err" style="margin-top:8px">${impErrs.map(e=>html`<div>${e}</div>`)}</div>`}
         </div>`}
