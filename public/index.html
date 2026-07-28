@@ -163,28 +163,34 @@ const PV={pat:'push',sub:'vertical',mod:'weightlifting'};
 const PH={pat:'push',sub:'horizontal',mod:'gymnastics'};
 const RV={pat:'pull',sub:'vertical',mod:'weightlifting'};
 const RH={pat:'pull',sub:'horizontal',mod:'weightlifting'};
-// dualTon variants: secondary pattern also counts full tonnage (active pull to shoulder/overhead)
+// dualTon variants: secondary pattern also counts full tonnage (active pull to shoulder/overhead, or compound movement where all assigned patterns move the full load)
 const RVd={pat:'pull',sub:'vertical',mod:'weightlifting',dualTon:true};
 const RHd={pat:'pull',sub:'horizontal',mod:'weightlifting',dualTon:true};
 const SQ={pat:'squat',sub:'traditional',mod:'weightlifting'};
+const SQd={pat:'squat',sub:'traditional',mod:'weightlifting',dualTon:true};
 const SL={pat:'squat',sub:'single_leg',mod:'weightlifting'};
+const SLd={pat:'squat',sub:'single_leg',mod:'weightlifting',dualTon:true};
+const PVd={pat:'push',sub:'vertical',mod:'weightlifting',dualTon:true};
 const BD={pat:null,sub:'bounding',mod:'monostructural'};
+// Loaded carry held against the body (sandbag): counts as pulling strength, but tonnage is meters/distanceDiv (rep-equivalent) x load — not meters x load
+const RHcarry={pat:'pull',sub:'horizontal',mod:'carries',distanceDiv:10};
 
 function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
   const isDB=/(^|\s)(sa\s*|dbl\s*|double\s*|alt\s*)?(db|dumbbell|kb|kettlebell)/.test(n);
 
   // ── Compound gymnastics / odd-object ──
-  if(/thrusters?/.test(n))return[SQ,PV];
+  if(/thrusters?/.test(n))return[SQ,PVd];
   if(/\bbbjo\b|burpee\s*box\s*jump\s*over/.test(n))return[PH,BD];
   if(/\bbbso\b|burpee\s*box\s*step\s*over/.test(n))return[PH,BD];
-  if(/devil'?s?\s*press/.test(n))return[PH,H,RV];
-  if(/man\s*maker/.test(n))return[PH,{pat:'pull',sub:'horizontal',mod:'gymnastics'},SQ,PV];
-  if(/curtis\s*p/.test(n))return[H,RV,SL,PV];
-  if(/\bcluster\b/.test(n))return[H,RV,SQ,PV];
+  // Devil's Press: DB weight only moves during the hinge pickup + overhead pull; the push-up after is bodyweight
+  if(/devil'?s?\s*press/.test(n))return[H,RVd,PH];
+  if(/man\s*maker/.test(n))return[PH,{pat:'pull',sub:'horizontal',mod:'gymnastics',dualTon:true},SQd,PVd];
+  if(/curtis\s*p/.test(n))return[H,RVd,SLd,PVd];
+  if(/\bcluster\b/.test(n))return[H,RVd,SQd,PVd];
 
   // ── Clean & Jerk: hinge + vertical pull (active) + vertical push ──
-  if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return[H,RVd,PV];
+  if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return[H,RVd,PVd];
 
   // ── Snatch DL / Snatch pull to hip: hinge only (no active overhead pull) ──
   if(/snatch\s*(dead\s*lift|dl\b|pull)|snatch\s*dl\s*to/.test(n))return[H,RH];
@@ -199,11 +205,17 @@ function clsAll(nm){
   // ── Swing: hinge only (ballistic hip, not an active arm pull) ──
   if(/\bswing\b/.test(n))return[H];
 
+  // ── Squat clean / squat snatch (incl. hang variants): hinge + vertical pull (active) + squat catch ──
+  if(/squat\s*(clean|snatch)/.test(n))return[H,RVd,SQd];
+
   // ── Snatch variants: hinge + vertical pull (active) ──
   if(/snatch/.test(n)&&!/dead\s*lift|dl\b|pull\b/.test(n))return[H,RVd];
 
   // ── Clean variants (no jerk): hinge + vertical pull (active) ──
-  if(/\bclean\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RVd];
+  if(/\bcleans?\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RVd];
+
+  // ── Sandbag carry / hold: loaded carry, pulling strength but not an active lift — tonnage uses distance/rep-equivalent, not meters ──
+  if(/sandbag\s*carry|sandbag\s*hold|\bsb\s*carry\b|\bsb\s*hold\b/.test(n))return[RHcarry];
 
   // ── Sandbag clean / SB over shoulder: hinge + horizontal pull (active) ──
   if(/sandbag|over\s*shoulder/.test(n))return[H,RHd];
@@ -485,15 +497,17 @@ function agg(sessions,start,end){
     for(const b of(sess.blocks||[])){
       if(b.k==='strength'||b.k==='accessory'){
         const cs=clsAllCached(b.mov);
-        const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0);
-        const ton=calcStrengthTon(b.sets,b.score);
+        const dDiv=cs[0]?.distanceDiv||1;
+        const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0)/dDiv;
+        const ton=calcStrengthTon(b.sets,b.score)/dDiv;
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,sess.date,i===0));
       }
       if(b.k==='metcon'){
         const tdv=inferTd(b.fmt)||b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
           const cs=clsAllCached(pm.n);
-          const pr=parseFloat(pm.r)||0;const pw=parseFloat(pm.w)||0;
+          const dDiv=cs[0]?.distanceDiv||1;
+          const pr=(parseFloat(pm.r)||0)/dDiv;const pw=parseFloat(pm.w)||0;
           cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,sess.date,i===0));
         }
       }
