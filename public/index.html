@@ -354,17 +354,17 @@ function calPeriod(type,offset=0){
 }
 
 // ══════ SVG CHARTS ══════
-function HBar({data,w=380,ht=180}){
+function HBar({data,w=380,ht=180,onPick}){
   if(!data.length)return html`<div style="color:#B8C1CC;font-size:12px;padding:16px;text-align:center">No data yet</div>`;
   const mx=Math.max(...data.map(d=>d.val),1);const bh=Math.min(22,ht/data.length-4);const lw=80;
   return html`<svg width=${w} height=${Math.max(ht,data.length*(bh+4)+8)} style="display:block;max-width:100%">
     ${data.map((d,i)=>{const y=i*(bh+4)+4;const bw=Math.max(2,(d.val/mx)*(w-lw-60));
-      return html`<g><text x=${lw-6} y=${y+bh/2+4} text-anchor="end" font-size="11" fill="#2B2825">${d.label}</text>
+      return html`<g style=${onPick?{cursor:'pointer'}:{}} onClick=${()=>onPick&&onPick(d)}><text x=${lw-6} y=${y+bh/2+4} text-anchor="end" font-size="11" fill="#2B2825" text-decoration=${onPick?'underline':'none'}>${d.label}</text>
         <rect x=${lw} y=${y} width=${bw} height=${bh} rx="3" fill=${d.color||'#7CA0BE'}/>
         <text x=${lw+bw+6} y=${y+bh/2+4} font-size="11" fill="#9BA3AC">${d.val>=1000?(d.val/1000).toFixed(1)+'k':d.val}</text></g>`;})}
   </svg>`;
 }
-function Donut({data,size=140}){
+function Donut({data,size=140,onPick}){
   if(!data.length||data.every(d=>d.val===0))return html`<div style="color:#B8C1CC;font-size:12px;padding:16px;text-align:center">No data</div>`;
   const total=data.reduce((a,d)=>a+d.val,0);if(!total)return html`<div style="color:#B8C1CC;font-size:12px;padding:16px">No data</div>`;
   const cx=size/2,cy=size/2,r=size*.35,ir=size*.2;let cum=-Math.PI/2;
@@ -373,10 +373,10 @@ function Donut({data,size=140}){
       const ang=(d.val/total)*Math.PI*2;const sa=cum;cum+=ang;const ea=cum;
       const x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(ea),y2=cy+r*Math.sin(ea);
       const ix1=cx+ir*Math.cos(ea),iy1=cy+ir*Math.sin(ea),ix2=cx+ir*Math.cos(sa),iy2=cy+ir*Math.sin(sa);
-      return html`<path d="M${x1},${y1} A${r},${r} 0 ${ang>Math.PI?1:0} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${ang>Math.PI?1:0} 0 ${ix2},${iy2} Z" fill=${d.color}/>`;
+      return html`<path d="M${x1},${y1} A${r},${r} 0 ${ang>Math.PI?1:0} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${ang>Math.PI?1:0} 0 ${ix2},${iy2} Z" fill=${d.color} style=${onPick?{cursor:'pointer'}:{}} onClick=${()=>onPick&&onPick(d)}/>`;
     })}</svg>
-    <div style="font-size:11px">${data.filter(d=>d.val>0).map(d=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-      <div style=${{width:10,height:10,borderRadius:2,background:d.color}}></div><span>${d.label}: ${d.val}</span></div>`)}</div>
+    <div style="font-size:11px">${data.filter(d=>d.val>0).map(d=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;${onPick?'cursor:pointer':''}" onClick=${()=>onPick&&onPick(d)}>
+      <div style=${{width:10,height:10,borderRadius:2,background:d.color}}></div><span style=${onPick?{textDecoration:'underline'}:{}}>${d.label}: ${d.val}</span></div>`)}</div>
   </div>`;
 }
 function Spark({vals,w=90,ht=24}){
@@ -476,13 +476,27 @@ function calcStrengthTon(sets,score){
 function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
   const pF={},pT={},pR={},mF={},mT={},mR={},sF={},sT={},td={short:0,med:0,long:0},mvs={};
+  const byPat={},byMod={};
   const mood={happy:0,neutralH:0,unhappy:0,hTotal:0,fun:0,neutralF:0,notfun:0,fTotal:0};
   let primaryTon=0;
-  function add(nm,pat,sub,mod,reps,ton,date,isPrimary){
+  function add(nm,pat,sub,mod,reps,ton,date,isPrimary,rawNm){
     if(isPrimary)primaryTon+=ton;
     if(pat){pF[pat]=(pF[pat]||0)+1;pT[pat]=(pT[pat]||0)+ton;pR[pat]=(pR[pat]||0)+reps;
-      if(sub){const sk=pat+'_'+sub;sF[sk]=(sF[sk]||0)+1;sT[sk]=(sT[sk]||0)+ton;}}
-    if(mod){mF[mod]=(mF[mod]||0)+1;mT[mod]=(mT[mod]||0)+ton;mR[mod]=(mR[mod]||0)+reps;}
+      if(sub){const sk=pat+'_'+sub;sF[sk]=(sF[sk]||0)+1;sT[sk]=(sT[sk]||0)+ton;}
+      if(rawNm){
+        const pk=normMov(rawNm)||rawNm;
+        if(!byPat[pat])byPat[pat]={};
+        if(!byPat[pat][pk])byPat[pat][pk]={freq:0,ton:0};
+        byPat[pat][pk].freq+=1;byPat[pat][pk].ton+=ton;
+      }
+    }
+    if(mod){mF[mod]=(mF[mod]||0)+1;mT[mod]=(mT[mod]||0)+ton;mR[mod]=(mR[mod]||0)+reps;
+      if(rawNm){
+        const mk2=normMov(rawNm)||rawNm;
+        if(!byMod[mod])byMod[mod]={};
+        byMod[mod][mk2]=(byMod[mod][mk2]||0)+1;
+      }
+    }
     if(mod==='monostructural'&&sub){const mk='mono_'+sub;sF[mk]=(sF[mk]||0)+1;}
     if(nm){
       const key=normMov(nm)||nm;
@@ -500,7 +514,7 @@ function agg(sessions,start,end){
         const dDiv=cs[0]?.distanceDiv||1;
         const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0)/dDiv;
         const ton=calcStrengthTon(b.sets,b.score)/dDiv;
-        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,sess.date,i===0));
+        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,sess.date,i===0,b.mov));
       }
       if(b.k==='metcon'){
         const tdv=inferTd(b.fmt)||b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
@@ -508,7 +522,7 @@ function agg(sessions,start,end){
           const cs=clsAllCached(pm.n);
           const dDiv=cs[0]?.distanceDiv||1;
           const pr=(parseFloat(pm.r)||0)/dDiv;const pw=parseFloat(pm.w)||0;
-          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,sess.date,i===0));
+          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,sess.date,i===0,pm.n));
         }
       }
     }
@@ -519,7 +533,7 @@ function agg(sessions,start,end){
   }
   const mvsFinal={};
   for(const[nm,d]of Object.entries(mvs))mvsFinal[nm]={...d,freq:d.freq.size};
-  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood,primaryTon};
+  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood,primaryTon,byPat,byMod};
 }
 
 // ══════ CONSECUTIVE DAYS ══════
@@ -674,6 +688,8 @@ function App(){
   const[trendDrill,setTrendDrill]=useState(null);
   const[trendExpand,setTrendExpand]=useState(null);
   const[metricDrill,setMetricDrill]=useState(null);
+  const[bubbleDrill,setBubbleDrill]=useState(null);
+  const[bubbleExpand,setBubbleExpand]=useState(null);
 
   useEffect(()=>{let c=false;
     const T=ms=>new Promise((_,r)=>setTimeout(r,ms));
@@ -943,10 +959,10 @@ function App(){
           ${restDay&&html`<div style="font-size:10px;margin-top:6px;opacity:.8">Last rest: ${restDaysAgo}d ago · ${fds(restDay)}</div>`}
         </div>
         <div class="ratio-card" style="padding:10px">
-          <div style="font-size:9px;font-weight:700;color:#2B2825;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Performance Satisfaction</div>
+          <div style="font-size:9px;font-weight:700;color:#2B2825;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Performance</div>
           <div style="display:flex;gap:2px;margin-bottom:6px">${RNGS.map(([k,l])=>html`<button class="rn ${happyRng===k?'act':''}" style="padding:2px 5px;font-size:9px" onClick=${()=>setHappyRng(k)}>${l}</button>`)}</div>
           <div class="ratio-val" style="text-align:center;color:${happyRate===null?'#B8C1CC':happyRate>=60?'#10B981':happyRate>=40?'#E8871E':'#A6293A'}">${happyRate===null?'—':happyRate+'%'}</div>
-          <div class="ratio-lbl" style="text-align:center">Satisfied</div>
+          <div class="ratio-lbl" style="text-align:center">Happy With Performance</div>
         </div>
         <div class="ratio-card" style="padding:10px">
           <div style="font-size:9px;font-weight:700;color:#2B2825;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Enjoyment</div>
@@ -1109,11 +1125,11 @@ function App(){
     const vpushS=subAgg.sF.push_vertical||0;const hpushS=subAgg.sF.push_horizontal||0;
     const vpullS=subAgg.sF.pull_vertical||0;const hpullS=subAgg.sF.pull_horizontal||0;
     const trad=subAgg.sF.squat_traditional||0;const sleg=subAgg.sF.squat_single_leg||0;
-    const patFD=PK.map(k=>({label:PATS[k].l,val:volAgg.pF[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
-    const patTD=PK.map(k=>({label:PATS[k].l,val:volAgg.pT[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
-    const modFD=MK.map(k=>({label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
-    const modTD=MK.map(k=>({label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
-    const tdD=[{label:'Short (<10m)',val:volAgg.td.short,color:'#FF5D73'},{label:'Medium (10-20m)',val:volAgg.td.med,color:'#4FA8D8'},{label:'Long (20m+)',val:volAgg.td.long,color:'#2B2825'}];
+    const patFD=PK.map(k=>({key:k,label:PATS[k].l,val:volAgg.pF[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
+    const patTD=PK.map(k=>({key:k,label:PATS[k].l,val:volAgg.pT[k]||0,color:PATS[k].c})).filter(x=>x.val>0);
+    const modFD=MK.map(k=>({key:k,label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
+    const modTD=MK.map(k=>({key:k,label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
+    const tdD=[{key:'short',label:'Short (<10m)',val:volAgg.td.short,color:'#FF5D73'},{key:'med',label:'Medium (10-20m)',val:volAgg.td.med,color:'#4FA8D8'},{key:'long',label:'Long (20m+)',val:volAgg.td.long,color:'#2B2825'}];
     const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0);
 
     return html`<div>
@@ -1127,12 +1143,12 @@ function App(){
         <div class="sc"><div class="sv">${Object.keys(volAgg.mvs).length}</div><div class="sl">Unique Moves</div></div>
       </div>
       <div class="g2">
-        <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${patFD}/></div>
-        <div class="card"><div class="ct">Modality Frequency</div><${HBar} data=${modFD}/></div>
+        <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${patFD} onPick=${d=>setBubbleDrill({kind:'patFreq',key:d.key,label:d.label,total:d.val})}/></div>
+        <div class="card"><div class="ct">Modality Frequency</div><${HBar} data=${modFD} onPick=${d=>setBubbleDrill({kind:'modFreq',key:d.key,label:d.label,total:d.val})}/></div>
       </div>
       <div class="g2">
-        <div class="card"><div class="ct">Tonnage by Pattern</div><${HBar} data=${patTD}/></div>
-        <div class="card"><div class="ct">Time Domain</div><${Donut} data=${tdD}/></div>
+        <div class="card"><div class="ct">Tonnage by Pattern</div><${HBar} data=${patTD} onPick=${d=>setBubbleDrill({kind:'patTon',key:d.key,label:d.label,total:d.val})}/></div>
+        <div class="card"><div class="ct">Time Domain</div><${Donut} data=${tdD} onPick=${d=>setBubbleDrill({kind:'timeDomain',key:d.key,label:d.label,total:d.val})}/></div>
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -1282,6 +1298,54 @@ function App(){
               <button onClick=${()=>setMetricDrill(null)} style="background:none;border:none;font-size:20px;color:#B8C1CC;cursor:pointer;line-height:1;padding:0 0 4px 8px">×</button>
             </div>
             <${LineChart} vals=${data} labels=${lbls} fmt=${metricDrill.fmt}/>
+          </div>
+        </div>`;
+      })()}
+      ${bubbleDrill&&(()=>{
+        const kind=bubbleDrill.kind;
+        const fmtTon=v=>v>=1000?(v/1000).toFixed(1)+'k':Math.round(v);
+        const close=()=>{setBubbleDrill(null);setBubbleExpand(null);};
+        let rows=null,sessions=null;
+        if(kind==='patFreq'||kind==='patTon'){
+          const src=volAgg.byPat[bubbleDrill.key]||{};
+          rows=Object.entries(src).map(([n,d])=>({n,freq:d.freq,ton:d.ton}))
+            .filter(r=>kind==='patTon'?r.ton>0:true)
+            .sort((a,b)=>kind==='patTon'?b.ton-a.ton:b.freq-a.freq);
+        } else if(kind==='modFreq'){
+          const src=volAgg.byMod[bubbleDrill.key]||{};
+          rows=Object.entries(src).map(([n,freq])=>({n,freq})).sort((a,b)=>b.freq-a.freq);
+        } else if(kind==='timeDomain'){
+          sessions=sess.filter(s=>s.date>=volP.start&&s.date<=volP.end&&(s.blocks||[]).some(b=>b.k==='metcon'&&(inferTd(b.fmt)||b.td)===bubbleDrill.key));
+        }
+        const subtitle={patFreq:'Pattern Frequency',patTon:'Tonnage by Pattern',modFreq:'Modality Frequency',timeDomain:'Time Domain'}[kind];
+        const totalLbl=kind==='patTon'?fmtTon(bubbleDrill.total)+' lbs':kind==='timeDomain'?bubbleDrill.total+' workout'+(bubbleDrill.total!==1?'s':''):bubbleDrill.total+' occurrence'+(bubbleDrill.total!==1?'s':'');
+        return html`<div style="position:fixed;inset:0;background:rgba(30,42,58,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px" onClick=${close}>
+          <div style="background:#FFFFFF;border-radius:12px;padding:20px 22px;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.2)" onClick=${e=>e.stopPropagation()}>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+              <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#2B2825">${bubbleDrill.label}</div>
+                <div style="font-size:10px;color:#9BA3AC;margin-top:2px">${subtitle} · ${totalLbl}</div>
+              </div>
+              <button onClick=${close} style="background:none;border:none;font-size:20px;color:#B8C1CC;cursor:pointer;line-height:1;padding:0 0 4px 8px">×</button>
+            </div>
+            ${rows&&(rows.length?html`<table style="width:100%;border-collapse:collapse;font-size:12px">
+              <tbody>${rows.map(r=>html`<tr style="border-bottom:1px solid #E5E0D8">
+                <td style="padding:6px 4px;color:#2B2825">${r.n}</td>
+                <td style="padding:6px 4px;text-align:right;color:#9BA3AC;font-weight:600">${kind==='patTon'?fmtTon(r.ton):r.freq}</td>
+              </tr>`)}</tbody>
+            </table>`:html`<div class="mut" style="padding:8px 0">No movements in this range.</div>`)}
+            ${sessions&&(sessions.length?sessions.map(s=>{const isOpen=bubbleExpand===s.date;return html`<div>
+              <div class="sr ${isOpen?'open':''}" onClick=${()=>setBubbleExpand(isOpen?null:s.date)}>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-weight:700;font-size:12px;color:#2B2825">${fd(s.date)}</span>
+                  <div style="display:flex;gap:3px;align-items:center">
+                    ${(s.blocks||[]).map(b=>html`<span class="kb kb-${b.k==='strength'?'str':b.k==='metcon'?'met':'acc'}">${{strength:'STR',metcon:'MET',accessory:'ACC'}[b.k]||b.k}</span>`)}
+                    <span style="margin-left:6px;color:#9BA3AC;font-size:12px">${isOpen?'▲':'▼'}</span>
+                  </div>
+                </div>
+              </div>
+              ${isOpen&&html`<div class="sd">${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}</div>`}
+            </div>`;}):html`<div class="mut" style="padding:8px 0">No sessions in this range.</div>`)}
           </div>
         </div>`;
       })()}
