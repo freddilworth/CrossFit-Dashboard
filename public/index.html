@@ -751,7 +751,36 @@ function App(){
     const sun=new Date(mon);sun.setDate(mon.getDate()+6);
     return{start:localISO(mon),end:localISO(sun)};
   }
-  function trendPeriod(type,offset){return type==='week'?calCalWeek(offset):calPeriod(type,offset);}
+  function calCalMonth(offset){
+    const now=new Date();let m=now.getMonth()-offset,y=now.getFullYear();
+    while(m<0){m+=12;y-=1;}
+    const start=y+'-'+String(m+1).padStart(2,'0')+'-01';
+    const lastDay=new Date(y,m+1,0).getDate();
+    const end=offset===0?localISO(now):y+'-'+String(m+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+    return{start,end};
+  }
+  function calCalQuarter(offset){
+    const now=new Date();let q=Math.floor(now.getMonth()/3)-offset,y=now.getFullYear();
+    while(q<0){q+=4;y-=1;}
+    const startMonth=q*3;
+    const start=y+'-'+String(startMonth+1).padStart(2,'0')+'-01';
+    const lastDay=new Date(y,startMonth+3,0);
+    const end=offset===0?localISO(now):localISO(lastDay);
+    return{start,end};
+  }
+  function calCalYear(offset){
+    const now=new Date();const y=now.getFullYear()-offset;
+    const start=y+'-01-01';
+    const end=offset===0?localISO(now):y+'-12-31';
+    return{start,end};
+  }
+  function trendPeriod(type,offset){
+    if(type==='week')return calCalWeek(offset);
+    if(type==='month')return calCalMonth(offset);
+    if(type==='quarter')return calCalQuarter(offset);
+    if(type==='year')return calCalYear(offset);
+    return calPeriod(type,offset);
+  }
   function trendLabel(type,offset){
     const{start,end}=trendPeriod(type,offset);
     if(type==='week'){
