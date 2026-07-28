@@ -84,6 +84,26 @@ X full rounds, movement by movement, until Y is used up:
   undercounts every AMRAP that doesn't finish on an exact round boundary, which is most
   of them.
 
+REPEATED MOVEMENT WITHIN ONE ROUND RULE (critical — each occurrence gets only its OWN
+share, never the combined total of all occurrences):
+Sometimes the same movement name appears more than once inside a SINGLE round/cycle of
+a repeating structure (AMRAP, EMOM, or "Every X for Y" interval work) — e.g. two
+different stations of the same round both include the same lift. Each occurrence becomes
+its own "pm" entry, and the app SUMS every entry that shares the same movement name — so
+each entry's "r" must be that ONE occurrence's own contribution (reps_per_occurrence ×
+total_rounds_completed), never the full combined total added up across all occurrences
+of that movement in the round.
+- Example: "Every 10:00 for 30:00" (3 rounds total), each round being:
+  200m Run / 10 Burpees / 2 Power Snatch (135) / 200m Run / 10 Burpees over the bar /
+  2 Power Snatch (135) — Power Snatch appears twice per round, at two different points.
+  Each Power Snatch occurrence: r = 2 × 3 rounds = 6. Do NOT compute 2 reps × 2
+  occurrences × 3 rounds = 12 and store that on each entry — once the app sums the two
+  entries (12 + 12 = 24), that is 2x the true total (the correct total is 6 + 6 = 12).
+- Verification before finalizing: add up every "r" across all entries sharing one
+  movement name. That sum must equal reps_per_occurrence × occurrences_per_round ×
+  total_rounds — no more. If the sum is a multiple of that (2x, 3x, ...), each entry was
+  given the full combined total instead of its own share; divide back down.
+
 DISTANCE RULE (critical — never store round count for distance movements):
 For Run, Row, Ski, Bike, Sled Push, Farmer Carry, and ANY movement stated in meters/yards/
 miles (not just the named cardio machines — this includes accessory/carry movements like
