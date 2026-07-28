@@ -339,7 +339,19 @@ function inferTd(fmt){
   if(n<=20)return'med';
   return'long';
 }
-function sessTd(s){for(const b of(s.blocks||[]))if(b.k==='metcon'){const v=inferTd(b.fmt)||b.td;if(v)return v;}return null;}
+// Fallback for formats with no stated duration ("For Time", "X Rounds", rep schemes):
+// derive it from the actual recorded finish time instead of guessing.
+function scoreTd(score){
+  if(!score)return null;
+  const m=String(score).trim().match(/^(\d{1,3}):(\d{2})/);
+  if(!m)return null;
+  const n=parseInt(m[1]);
+  if(n<10)return'short';
+  if(n<=20)return'med';
+  return'long';
+}
+function blockTd(b){return inferTd(b.fmt)||scoreTd(b.score)||b.td||null;}
+function sessTd(s){for(const b of(s.blocks||[]))if(b.k==='metcon'){const v=blockTd(b);if(v)return v;}return null;}
 
 function calPeriod(type,offset=0){
   const now=new Date();const today=now.toISOString().slice(0,10);let s;
@@ -517,7 +529,7 @@ function agg(sessions,start,end){
         cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,sess.date,i===0,b.mov));
       }
       if(b.k==='metcon'){
-        const tdv=inferTd(b.fmt)||b.td||'unk';if(td[tdv]!==undefined)td[tdv]++;
+        const tdv=blockTd(b)||'unk';if(td[tdv]!==undefined)td[tdv]++;
         for(const pm of(b.pm||[])){
           const cs=clsAllCached(pm.n);
           const dDiv=cs[0]?.distanceDiv||1;
@@ -855,7 +867,7 @@ function App(){
     function fmtSession(s){
       const parts=(s.blocks||[]).map(b=>{
         if(b.k==='strength')return'STR: '+(b.mov||'Unknown');
-        if(b.k==='metcon'){const mvs=(b.pm||[]).slice(0,6).map(p=>normMov(p.n)||p.n).join(', ');return'MET: '+(b.fmt||'Metcon')+' ('+mvs+') | '+(b.td||'?')+' domain';}
+        if(b.k==='metcon'){const mvs=(b.pm||[]).slice(0,6).map(p=>normMov(p.n)||p.n).join(', ');return'MET: '+(b.fmt||'Metcon')+' ('+mvs+') | '+(blockTd(b)||'?')+' domain';}
         if(b.k==='accessory')return'ACC: '+(b.mov||'Unknown');
         return'';
       }).filter(Boolean).join(' | ');
@@ -1315,7 +1327,7 @@ function App(){
           const src=volAgg.byMod[bubbleDrill.key]||{};
           rows=Object.entries(src).map(([n,freq])=>({n,freq})).sort((a,b)=>b.freq-a.freq);
         } else if(kind==='timeDomain'){
-          sessions=sess.filter(s=>s.date>=volP.start&&s.date<=volP.end&&(s.blocks||[]).some(b=>b.k==='metcon'&&(inferTd(b.fmt)||b.td)===bubbleDrill.key));
+          sessions=sess.filter(s=>s.date>=volP.start&&s.date<=volP.end&&(s.blocks||[]).some(b=>b.k==='metcon'&&blockTd(b)===bubbleDrill.key));
         }
         const subtitle={patFreq:'Pattern Frequency',patTon:'Tonnage by Pattern',modFreq:'Modality Frequency',timeDomain:'Time Domain'}[kind];
         const totalLbl=kind==='patTon'?fmtTon(bubbleDrill.total)+' lbs':kind==='timeDomain'?bubbleDrill.total+' workout'+(bubbleDrill.total!==1?'s':''):bubbleDrill.total+' occurrence'+(bubbleDrill.total!==1?'s':'');
