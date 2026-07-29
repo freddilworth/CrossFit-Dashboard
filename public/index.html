@@ -114,7 +114,7 @@ function cls(nm){
   if(/strict\s*pull/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
   // Pull — horizontal
   if(/ring\s*row|\brr\b/.test(n))return{pat:'pull',sub:'horizontal',mod:'gymnastics'};
-  if(/(barbell|db|pendlay|bent)\s*row/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
+  if(/bent\s*over\s*rows?|(barbell|db|pendlay|dumbbell)\s*rows?\b/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
   // Olympic squat variants
   if(/squat\s*(clean|snatch)/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/hang\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
@@ -214,8 +214,8 @@ function clsAll(nm){
   // ── Clean variants (no jerk): hinge + vertical pull (active) ──
   if(/\bcleans?\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RVd];
 
-  // ── Sandbag carry / hold: loaded carry, pulling strength but not an active lift — tonnage uses distance/rep-equivalent, not meters ──
-  if(/sandbag\s*carry|sandbag\s*hold|\bsb\s*carry\b|\bsb\s*hold\b/.test(n))return[RHcarry];
+  // ── Sandbag carry / hold / walk: loaded carry, pulling strength but not an active lift — tonnage uses distance/rep-equivalent, not meters ──
+  if(/sandbag\s*(carry|hold|walk)|\bsb\s*(carry|hold|walk)\b/.test(n))return[RHcarry];
 
   // ── Sandbag clean / SB over shoulder: hinge + horizontal pull (active) ──
   if(/sandbag|over\s*shoulder/.test(n))return[H,RHd];
@@ -389,6 +389,13 @@ function Donut({data,size=140,onPick}){
       <div style=${{width:10,height:10,borderRadius:2,background:d.color}}></div><span style=${onPick?{textDecoration:'underline'}:{}}>${d.label}: ${d.val}</span></div>`)}</div>
   </div>`;
 }
+// Fixed-width dot cluster — one dot per classification a movement carries (pattern or modality).
+// The cell width is set by the caller, not by dot count, so rows stay visually uniform whether a
+// movement resolves to one dot or four.
+function Dots(items,map,key){
+  if(!items||!items.length)return html`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#D8D2C7" title="Not classified"></span>`;
+  return html`<span style="display:inline-flex;gap:3px">${items.map((it,i)=>html`<span key=${i} style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${map[it[key]]?.c||'#9BA3AC'}" title=${map[it[key]]?.l||it[key]}></span>`)}</span>`;
+}
 function Spark({vals,w=90,ht=24}){
   if(!vals||vals.length<2)return html`<span class="mut">—</span>`;
   const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
@@ -489,7 +496,7 @@ function agg(sessions,start,end){
   const byPat={},byMod={};
   const mood={happy:0,neutralH:0,unhappy:0,hTotal:0,fun:0,neutralF:0,notfun:0,fTotal:0};
   let primaryTon=0;
-  function add(nm,pat,sub,mod,reps,ton,date,isPrimary,rawNm){
+  function add(pat,sub,mod,reps,ton,isPrimary,rawNm){
     if(isPrimary)primaryTon+=ton;
     if(pat){pF[pat]=(pF[pat]||0)+1;pT[pat]=(pT[pat]||0)+ton;pR[pat]=(pR[pat]||0)+reps;
       if(sub){const sk=pat+'_'+sub;sF[sk]=(sF[sk]||0)+1;sT[sk]=(sT[sk]||0)+ton;}
@@ -508,14 +515,29 @@ function agg(sessions,start,end){
       }
     }
     if(mod==='monostructural'&&sub){const mk='mono_'+sub;sF[mk]=(sF[mk]||0)+1;}
-    if(nm){
-      const key=normMov(nm)||nm;
-      if(!mvs[key])mvs[key]={freq:new Set(),reps:0,ton:0,pat,sub,mod,last:''};
-      mvs[key].freq.add(date);mvs[key].reps+=reps;mvs[key].ton+=ton;
-      if(date>mvs[key].last)mvs[key].last=date;
-      if(pat&&!mvs[key].pat){mvs[key].pat=pat;mvs[key].sub=sub;}
-      if(mod&&!mvs[key].mod)mvs[key].mod=mod;
-    }
+  }
+  // Movement Detail bookkeeping — records EVERY pattern/modality a movement's classifier returns
+  // (not just the primary one) so the table can show the full breakdown instead of silently dropping the rest.
+  function note(rawNm,cs,reps,ton,date){
+    if(!rawNm)return;
+    const key=normMov(rawNm)||rawNm;
+    if(!mvs[key])mvs[key]={freq:new Set(),reps:0,ton:0,last:'',pats:[],mods:[]};
+    const m=mvs[key];
+    m.freq.add(date);m.reps+=reps;m.ton+=ton;
+    if(date>m.last)m.last=date;
+    cs.forEach((c,i)=>{
+      const cton=(i===0||c.dualTon)?ton:0;
+      if(c.pat){
+        let e=m.pats.find(p=>p.pat===c.pat&&p.sub===c.sub);
+        if(!e){e={pat:c.pat,sub:c.sub,ton:0};m.pats.push(e);}
+        e.ton+=cton;
+      }
+      if(c.mod){
+        let e=m.mods.find(x=>x.mod===c.mod);
+        if(!e){e={mod:c.mod,ton:0};m.mods.push(e);}
+        e.ton+=cton;
+      }
+    });
   }
   for(const sess of filt){
     for(const b of(sess.blocks||[])){
@@ -524,7 +546,8 @@ function agg(sessions,start,end){
         const dDiv=cs[0]?.distanceDiv||1;
         const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0)/dDiv;
         const ton=calcStrengthTon(b.sets,b.score)/dDiv;
-        cs.forEach((c,i)=>add(i===0?b.mov:null,c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,sess.date,i===0,b.mov));
+        cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,i===0,b.mov));
+        note(b.mov,cs,reps,ton,sess.date);
       }
       if(b.k==='metcon'){
         const tdv=blockTd(b)||'unk';if(td[tdv]!==undefined)td[tdv]++;
@@ -532,7 +555,8 @@ function agg(sessions,start,end){
           const cs=clsAllCached(pm.n);
           const dDiv=cs[0]?.distanceDiv||1;
           const pr=(parseFloat(pm.r)||0)/dDiv;const pw=parseFloat(pm.w)||0;
-          cs.forEach((c,i)=>add(i===0?pm.n:null,c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,sess.date,i===0,pm.n));
+          cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,i===0,pm.n));
+          note(pm.n,cs,pr,pr*pw,sess.date);
         }
       }
     }
@@ -542,7 +566,11 @@ function agg(sessions,start,end){
     if(s.fun){mood.fTotal++;if(s.fun==='fun')mood.fun+=1;else if(s.fun==='notfun')mood.notfun+=0;else mood.neutralF+=0.5;}
   }
   const mvsFinal={};
-  for(const[nm,d]of Object.entries(mvs))mvsFinal[nm]={...d,freq:d.freq.size};
+  for(const[nm,d]of Object.entries(mvs)){
+    d.pats.sort((a,b)=>b.ton-a.ton);
+    d.mods.sort((a,b)=>b.ton-a.ton);
+    mvsFinal[nm]={...d,freq:d.freq.size,pat:d.pats[0]?.pat||null,sub:d.pats[0]?.sub||null,mod:d.mods[0]?.mod||null};
+  }
   return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood,primaryTon,byPat,byMod};
 }
 
@@ -643,6 +671,7 @@ function App(){
   function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
   const[mvRng,setMvRng]=useState('all');
   const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
+  const[mvExpand,setMvExpand]=useState(null);
   function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState('');
@@ -1275,16 +1304,43 @@ function App(){
           const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
           return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#2B2825':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
         })}</tr></thead>
-        <tbody>${mvTbl.map(m=>html`<tr>
-          <td>${m.n}</td>
-          <td><span style="font-size:10px;font-weight:600;color:${PATS[m.pat]?.c||'#9BA3AC'}">${PATS[m.pat]?.l||(m.pat||'-')}</span>${m.sub?html`<span class="mut" style="margin-left:3px">${m.sub}</span>`:''}</td>
-          <td><span style="font-size:10px;font-weight:600;color:${MODS[m.mod]?.c||'#9BA3AC'}">${MODS[m.mod]?.l||(m.mod||'-')}</span></td>
-          <td style="text-align:right">${m.freq}</td>
-          <td style="text-align:right;font-weight:600">${m.reps}</td>
-          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps):'-'}</td>
-          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
-          <td class="mut">${fd(m.last)}</td>
-        </tr>`)}</tbody></table>
+        <tbody>${mvTbl.map(m=>{
+          const isOpen=mvExpand===m.n;
+          return[
+            html`<tr style="cursor:pointer" onClick=${()=>setMvExpand(isOpen?null:m.n)}>
+              <td><span style="font-size:9px;color:#B8C1CC;display:inline-block;width:10px">${isOpen?'▾':'▸'}</span>${m.n}</td>
+              <td style="width:64px">${Dots(m.pats,PATS,'pat')}</td>
+              <td style="width:64px">${Dots(m.mods,MODS,'mod')}</td>
+              <td style="text-align:right">${m.freq}</td>
+              <td style="text-align:right;font-weight:600">${m.reps}</td>
+              <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps):'-'}</td>
+              <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
+              <td class="mut">${fd(m.last)}</td>
+            </tr>`,
+            isOpen&&html`<tr>
+              <td colSpan="8" style="background:#FAF8F3;padding:8px 10px;border-bottom:1px solid #E5E0D8">
+                <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:11px">
+                  <div>
+                    <div class="mut" style="margin-bottom:4px;font-weight:600">Pattern breakdown</div>
+                    ${m.pats.length?m.pats.map(p=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${PATS[p.pat]?.c||'#9BA3AC'}"></span>
+                      <span style="font-weight:600;color:#2B2825">${PATS[p.pat]?.l||p.pat}${p.sub?html`<span class="mut" style="margin-left:3px;font-weight:400">${p.sub}</span>`:''}</span>
+                      <span class="mut">${p.ton>0?p.ton.toLocaleString()+' lb':'no load'}</span>
+                    </div>`):html`<div class="mut">Not classified</div>`}
+                  </div>
+                  <div>
+                    <div class="mut" style="margin-bottom:4px;font-weight:600">Modality breakdown</div>
+                    ${m.mods.length?m.mods.map(mo=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${MODS[mo.mod]?.c||'#9BA3AC'}"></span>
+                      <span style="font-weight:600;color:#2B2825">${MODS[mo.mod]?.l||mo.mod}</span>
+                      <span class="mut">${mo.ton>0?mo.ton.toLocaleString()+' lb':'no load'}</span>
+                    </div>`):html`<div class="mut">Not classified</div>`}
+                  </div>
+                </div>
+              </td>
+            </tr>`
+          ];
+        })}</tbody></table>
         </div>
       </div>
       <div class="card">
