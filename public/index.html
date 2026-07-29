@@ -393,7 +393,7 @@ function Donut({data,size=140,onPick}){
 // second line, so every row stays the same height even when a movement carries several patterns).
 function PatLabels(items,map,key){
   if(!items||!items.length)return html`<span class="mut">-</span>`;
-  return html`<span>${items.map((it,i)=>html`<span key=${i}>${i>0?html`<span class="mut" style="margin:0 4px">·</span>`:''}<span style="font-weight:600;color:${map[it[key]]?.c||'#9BA3AC'}">${map[it[key]]?.l||it[key]}</span>${it.sub?html`<span class="mut" style="margin-left:2px;font-weight:400">${it.sub}</span>`:''}</span>`)}</span>`;
+  return html`<span style="font-size:10px">${items.map((it,i)=>html`<span key=${i}>${i>0?html`<span class="mut" style="margin:0 4px">·</span>`:''}<span style="font-weight:600;color:${map[it[key]]?.c||'#9BA3AC'}">${map[it[key]]?.l||it[key]}</span>${it.sub?html`<span class="mut" style="margin-left:2px;font-weight:400">${it.sub}</span>`:''}</span>`)}</span>`;
 }
 function Spark({vals,w=90,ht=24}){
   if(!vals||vals.length<2)return html`<span class="mut">—</span>`;
