@@ -1317,27 +1317,21 @@ function App(){
               <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
               <td class="mut">${fd(m.last)}</td>
             </tr>`,
-            isOpen&&html`<tr>
-              <td colSpan="8" style="background:#FAF8F3;padding:8px 10px;border-bottom:1px solid #E5E0D8">
-                <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:11px">
-                  <div>
-                    <div class="mut" style="margin-bottom:4px;font-weight:600">Pattern breakdown</div>
-                    ${m.pats.length?m.pats.map(p=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-                      <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${PATS[p.pat]?.c||'#9BA3AC'}"></span>
-                      <span style="font-weight:600;color:#2B2825">${PATS[p.pat]?.l||p.pat}${p.sub?html`<span class="mut" style="margin-left:3px;font-weight:400">${p.sub}</span>`:''}</span>
-                      <span class="mut">${p.ton>0?p.ton.toLocaleString()+' lb':'no load'}</span>
-                    </div>`):html`<div class="mut">Not classified</div>`}
-                  </div>
-                  <div>
-                    <div class="mut" style="margin-bottom:4px;font-weight:600">Modality breakdown</div>
-                    ${m.mods.length?m.mods.map(mo=>html`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-                      <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${MODS[mo.mod]?.c||'#9BA3AC'}"></span>
-                      <span style="font-weight:600;color:#2B2825">${MODS[mo.mod]?.l||mo.mod}</span>
-                      <span class="mut">${mo.ton>0?mo.ton.toLocaleString()+' lb':'no load'}</span>
-                    </div>`):html`<div class="mut">Not classified</div>`}
-                  </div>
-                </div>
+            isOpen&&html`<tr style="background:#FAF8F3;border-bottom:1px solid #E5E0D8">
+              <td></td>
+              <td style="width:64px;vertical-align:top;padding-top:0;padding-bottom:8px">
+                ${m.pats.length?m.pats.map(p=>html`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;font-size:10px">
+                  <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${PATS[p.pat]?.c||'#9BA3AC'};flex-shrink:0"></span>
+                  <span style="color:#2B2825">${PATS[p.pat]?.l||p.pat}${p.sub?html`<span class="mut" style="margin-left:2px">${p.sub}</span>`:''}</span>
+                </div>`):html`<div class="mut" style="font-size:10px">Not classified</div>`}
               </td>
+              <td style="width:64px;vertical-align:top;padding-top:0;padding-bottom:8px">
+                ${m.mods.length?m.mods.map(mo=>html`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;font-size:10px">
+                  <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${MODS[mo.mod]?.c||'#9BA3AC'};flex-shrink:0"></span>
+                  <span style="color:#2B2825">${MODS[mo.mod]?.l||mo.mod}</span>
+                </div>`):html`<div class="mut" style="font-size:10px">Not classified</div>`}
+              </td>
+              <td colSpan="5"></td>
             </tr>`
           ];
         })}</tbody></table>
