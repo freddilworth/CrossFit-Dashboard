@@ -389,12 +389,11 @@ function Donut({data,size=140,onPick}){
       <div style=${{width:10,height:10,borderRadius:2,background:d.color}}></div><span style=${onPick?{textDecoration:'underline'}:{}}>${d.label}: ${d.val}</span></div>`)}</div>
   </div>`;
 }
-// Fixed-width dot cluster — one dot per classification a movement carries (pattern or modality).
-// The cell width is set by the caller, not by dot count, so rows stay visually uniform whether a
-// movement resolves to one dot or four.
-function Dots(items,map,key){
-  if(!items||!items.length)return html`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#D8D2C7" title="Not classified"></span>`;
-  return html`<span style="display:inline-flex;gap:3px">${items.map((it,i)=>html`<span key=${i} style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${map[it[key]]?.c||'#9BA3AC'}" title=${map[it[key]]?.l||it[key]}></span>`)}</span>`;
+// One or more color-coded text labels per movement, joined on a single line (never wraps to a
+// second line, so every row stays the same height even when a movement carries several patterns).
+function PatLabels(items,map,key){
+  if(!items||!items.length)return html`<span class="mut">-</span>`;
+  return html`<span>${items.map((it,i)=>html`<span key=${i}>${i>0?html`<span class="mut" style="margin:0 4px">·</span>`:''}<span style="font-weight:600;color:${map[it[key]]?.c||'#9BA3AC'}">${map[it[key]]?.l||it[key]}</span>${it.sub?html`<span class="mut" style="margin-left:2px;font-weight:400">${it.sub}</span>`:''}</span>`)}</span>`;
 }
 function Spark({vals,w=90,ht=24}){
   if(!vals||vals.length<2)return html`<span class="mut">—</span>`;
@@ -671,7 +670,6 @@ function App(){
   function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
   const[mvRng,setMvRng]=useState('all');
   const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
-  const[mvExpand,setMvExpand]=useState(null);
   function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState('');
@@ -1304,37 +1302,16 @@ function App(){
           const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
           return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#2B2825':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
         })}</tr></thead>
-        <tbody>${mvTbl.map(m=>{
-          const isOpen=mvExpand===m.n;
-          return[
-            html`<tr style="cursor:pointer" onClick=${()=>setMvExpand(isOpen?null:m.n)}>
-              <td><span style="font-size:9px;color:#B8C1CC;display:inline-block;width:10px">${isOpen?'▾':'▸'}</span>${m.n}</td>
-              <td style="width:64px">${Dots(m.pats,PATS,'pat')}</td>
-              <td style="width:64px">${Dots(m.mods,MODS,'mod')}</td>
-              <td style="text-align:right">${m.freq}</td>
-              <td style="text-align:right;font-weight:600">${m.reps}</td>
-              <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps):'-'}</td>
-              <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
-              <td class="mut">${fd(m.last)}</td>
-            </tr>`,
-            isOpen&&html`<tr style="background:#FAF8F3;border-bottom:1px solid #E5E0D8">
-              <td></td>
-              <td style="width:64px;vertical-align:top;padding-top:0;padding-bottom:8px">
-                ${m.pats.length?m.pats.map(p=>html`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;font-size:10px">
-                  <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${PATS[p.pat]?.c||'#9BA3AC'};flex-shrink:0"></span>
-                  <span style="color:#2B2825">${PATS[p.pat]?.l||p.pat}${p.sub?html`<span class="mut" style="margin-left:2px">${p.sub}</span>`:''}</span>
-                </div>`):html`<div class="mut" style="font-size:10px">Not classified</div>`}
-              </td>
-              <td style="width:64px;vertical-align:top;padding-top:0;padding-bottom:8px">
-                ${m.mods.length?m.mods.map(mo=>html`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;font-size:10px">
-                  <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${MODS[mo.mod]?.c||'#9BA3AC'};flex-shrink:0"></span>
-                  <span style="color:#2B2825">${MODS[mo.mod]?.l||mo.mod}</span>
-                </div>`):html`<div class="mut" style="font-size:10px">Not classified</div>`}
-              </td>
-              <td colSpan="5"></td>
-            </tr>`
-          ];
-        })}</tbody></table>
+        <tbody>${mvTbl.map(m=>html`<tr>
+          <td>${m.n}</td>
+          <td style="white-space:nowrap">${PatLabels(m.pats,PATS,'pat')}</td>
+          <td style="white-space:nowrap">${PatLabels(m.mods,MODS,'mod')}</td>
+          <td style="text-align:right">${m.freq}</td>
+          <td style="text-align:right;font-weight:600">${m.reps}</td>
+          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0&&m.reps>0?Math.round(m.ton/m.reps):'-'}</td>
+          <td style="text-align:right;color:${m.ton>0?'#FF6B4A':'#B8C1CC'}">${m.ton>0?m.ton.toLocaleString():'-'}</td>
+          <td class="mut">${fd(m.last)}</td>
+        </tr>`)}</tbody></table>
         </div>
       </div>
       <div class="card">
