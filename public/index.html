@@ -943,6 +943,19 @@ function App(){
   // Movement Group Totals aggregation — its own independent range too
   const mtP=useMemo(()=>calPeriod(mtRng,0),[mtRng]);
   const mtAgg=useMemo(()=>agg(sess,mtP.start,mtP.end),[sess,mtP]);
+  // Last 8 completed periods (never the current, in-progress one) — mtHistory[0] is "last period",
+  // and the average across all 8 is the rolling baseline shown alongside the current total.
+  // Not meaningful for "All" (there is no "previous all-time" or "average all-time"), so null there.
+  const mtHistory=useMemo(()=>{
+    if(mtRng==='all')return null;
+    const arr=[];
+    for(let i=1;i<=8;i++){
+      const p=calPeriod(mtRng,i);
+      arr.push(agg(sess,p.start,p.end));
+    }
+    return arr;
+  },[sess,mtRng]);
+  const MT_PERIOD_LABEL={week:'wk',month:'mo',quarter:'qtr',year:'yr'};
 
   // Sparkline periods — capped at 4, driven by rngDeferred
   const spCount=4;
@@ -1498,10 +1511,19 @@ function App(){
                 </select>
               `:html`
                 <div style="text-align:right">
-                  <span style="font-size:12px;color:#B8C1CC" title="Change metric" onClick=${e=>{e.stopPropagation();setMtEditSlot(i);}}>✎</span>
+                  <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:14px;color:#6B6B65;background:rgba(255,255,255,0.55)" title="Change metric" onClick=${e=>{e.stopPropagation();setMtEditSlot(i);}}>✎</span>
                 </div>
                 <div style="font-size:24px;font-weight:700;color:#2B2825;margin-top:6px">${fmtMovementTotal(val,cat.fmt)}</div>
                 <div style="font-size:11px;color:#6B6B65;text-transform:uppercase;letter-spacing:1px;margin-top:2px">${cat.label}</div>
+                ${mtHistory&&(()=>{
+                  const periodLbl=MT_PERIOD_LABEL[mtRng];
+                  const prevVal=mtHistory[0].movementTotals[key]||0;
+                  const avgVal=mtHistory.reduce((s,a)=>s+(a.movementTotals[key]||0),0)/mtHistory.length;
+                  return html`<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.08);font-size:11px;color:#6B6B65;display:flex;justify-content:space-between;gap:6px">
+                    <span>Avg/${periodLbl} <b style="color:#2B2825">${fmtMovementTotal(avgVal,cat.fmt)}</b></span>
+                    <span>Last ${periodLbl} <b style="color:#2B2825">${fmtMovementTotal(prevVal,cat.fmt)}</b></span>
+                  </div>`;
+                })()}
               `}
             </div>`;
           })}
