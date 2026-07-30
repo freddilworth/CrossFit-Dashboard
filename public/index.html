@@ -932,9 +932,18 @@ function App(){
 
   // Volume aggregation — driven by rngDeferred so button clicks don't block the thread
   const volP=useMemo(()=>calPeriod(rngDeferred,0),[rngDeferred]);
-  const volPrev=useMemo(()=>calPeriod(rngDeferred,1),[rngDeferred]);
   const volAgg=useMemo(()=>agg(sess,volP.start,volP.end),[sess,volP]);
-  const volPrevAgg=useMemo(()=>agg(sess,volPrev.start,volPrev.end),[sess,volPrev]);
+  // Same rolling-history idea as Movement Group Totals below: last 8 completed periods, used for
+  // the Avg/period and Last period lines under Sessions and Pounds Moved. Not meaningful for "All".
+  const volHistory=useMemo(()=>{
+    if(rngDeferred==='all')return null;
+    const arr=[];
+    for(let i=1;i<=8;i++){
+      const p=calPeriod(rngDeferred,i);
+      arr.push(agg(sess,p.start,p.end));
+    }
+    return arr;
+  },[sess,rngDeferred]);
 
   // Movement Detail aggregation — independent range, decoupled from the page-level Week/Month/Quarter/Year/All toggle
   const mvP=useMemo(()=>calPeriod(mvRng,0),[mvRng]);
@@ -955,7 +964,7 @@ function App(){
     }
     return arr;
   },[sess,mtRng]);
-  const MT_PERIOD_LABEL={week:'wk',month:'mo',quarter:'qtr',year:'yr'};
+  const PERIOD_LABEL_ABBREV={week:'wk',month:'mo',quarter:'qtr',year:'yr'};
 
   // Sparkline periods — capped at 4, driven by rngDeferred
   const spCount=4;
@@ -1389,6 +1398,13 @@ function App(){
     const modTD=MK.map(k=>({key:k,label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const tdD=[{key:'short',label:'Short (<10m)',val:volAgg.td.short,color:'#FF5D73'},{key:'med',label:'Medium (10-20m)',val:volAgg.td.med,color:'#4FA8D8'},{key:'long',label:'Long (20m+)',val:volAgg.td.long,color:'#2B2825'}];
     const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0);
+    const sumTon=a=>Object.values(a.pT).reduce((s,b)=>s+(isNaN(b)?0:b),0);
+    const fmtTon=v=>v>0?(v/1000).toFixed(1)+'k':'0';
+    const volPeriodLbl=PERIOD_LABEL_ABBREV[rngDeferred];
+    const avgCnt=volHistory?Math.round(volHistory.reduce((s,a)=>s+a.cnt,0)/volHistory.length):null;
+    const lastCnt=volHistory?volHistory[0].cnt:null;
+    const avgTon=volHistory?volHistory.reduce((s,a)=>s+sumTon(a),0)/volHistory.length:null;
+    const lastTon=volHistory?sumTon(volHistory[0]):null;
 
     return html`<div>
       <div style="display:flex;gap:3px;margin-bottom:14px">
@@ -1396,8 +1412,14 @@ function App(){
           html`<button class="rn ${rng===k?'act':''}" onClick=${()=>handleSetRng(k)}>${l}</button>`)}
       </div>
       <div class="g3" style="margin-bottom:14px">
-        <div class="sc"><div class="sv">${volAgg.cnt}</div><div class="sl">Sessions</div></div>
-        <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+'k':'0'}</div><div class="sl">Pounds Moved</div></div>
+        <div class="sc">
+          <div class="sv">${volAgg.cnt}</div><div class="sl">Sessions</div>
+          ${volHistory&&html`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E5E0D8;font-size:11px;color:#9BA3AC">Avg/${volPeriodLbl} <b style="color:#2B2825">${avgCnt}</b> · Last ${volPeriodLbl} <b style="color:#2B2825">${lastCnt}</b></div>`}
+        </div>
+        <div class="sc">
+          <div class="sv">${fmtTon(totalTon)}</div><div class="sl">Pounds Moved</div>
+          ${volHistory&&html`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E5E0D8;font-size:11px;color:#9BA3AC">Avg/${volPeriodLbl} <b style="color:#2B2825">${fmtTon(avgTon)}</b> · Last ${volPeriodLbl} <b style="color:#2B2825">${fmtTon(lastTon)}</b></div>`}
+        </div>
         <div class="sc"><div class="sv">${Object.keys(volAgg.mvs).length}</div><div class="sl">Unique Moves</div></div>
       </div>
       <div class="g2">
@@ -1516,7 +1538,7 @@ function App(){
                 <div style="font-size:24px;font-weight:700;color:#2B2825;margin-top:6px">${fmtMovementTotal(val,cat.fmt)}</div>
                 <div style="font-size:11px;color:#6B6B65;text-transform:uppercase;letter-spacing:1px;margin-top:2px">${cat.label}</div>
                 ${mtHistory&&(()=>{
-                  const periodLbl=MT_PERIOD_LABEL[mtRng];
+                  const periodLbl=PERIOD_LABEL_ABBREV[mtRng];
                   const prevVal=mtHistory[0].movementTotals[key]||0;
                   const avgVal=mtHistory.reduce((s,a)=>s+(a.movementTotals[key]||0),0)/mtHistory.length;
                   return html`<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.08);font-size:11px;color:#6B6B65;display:flex;justify-content:space-between;gap:6px">
