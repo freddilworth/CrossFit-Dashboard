@@ -49,6 +49,7 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 .set-chip{background:#FFFFFF;border:1px solid #D0C9BC;border-radius:3px;padding:3px 7px;font-size:11px;font-family:monospace;display:inline-block;margin:2px}
 .err{background:#F6E0E3;color:#A6293A;padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px}
 .ok{color:#10B981;font-size:12px;font-weight:600;margin-top:8px}
+.warn{background:#FDF1DC;color:#92600A;padding:8px 12px;border-radius:6px;font-size:12px;margin-top:8px}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid #D0C9BC;border-top-color:#2B2825;border-radius:50%;animation:sp .6s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .ratio-card{text-align:center;padding:14px;background:#FFFFFF;border:1px solid #D0C9BC;border-radius:10px}
@@ -336,6 +337,27 @@ const _clsCache={};
 function clsAllCached(nm){
   if(_clsCache[nm])return _clsCache[nm];
   return(_clsCache[nm]=clsAll(nm));
+}
+
+// Movements the classifier fully whiffed on (no pattern AND no modality) — surfaced to the user
+// right after parsing so a new/unrecognized movement is visible the day it's logged, not months
+// later as a blank dash in Movement Detail.
+function findUnclassified(blocks){
+  const seen=new Set();
+  for(const b of(blocks||[])){
+    if((b.k==='strength'||b.k==='accessory')&&b.mov){
+      const c=clsAllCached(b.mov)[0];
+      if(!c.pat&&!c.mod)seen.add(normMov(b.mov)||b.mov);
+    }
+    if(b.k==='metcon'){
+      for(const pm of(b.pm||[])){
+        if(!pm.n)continue;
+        const c=clsAllCached(pm.n)[0];
+        if(!c.pat&&!c.mod)seen.add(normMov(pm.n)||pm.n);
+      }
+    }
+  }
+  return[...seen];
 }
 
 // ══════ METADATA ══════
@@ -712,6 +734,7 @@ function App(){
   const[parsing,setParsing]=useState(false);
   const[pErr,setPErr]=useState('');
   const[pOk,setPOk]=useState('');
+  const[pWarn,setPWarn]=useState('');
   const[tdRng,setTdRng]=useState('all');
   const[happyRng,setHappyRng]=useState('all');
   const[funRng,setFunRng]=useState('all');
@@ -1006,7 +1029,7 @@ function App(){
 
   async function submit(){
     if(!inText.trim()||parsing)return;
-    setParsing(true);setPErr('');setPOk('');
+    setParsing(true);setPErr('');setPOk('');setPWarn('');
     try{
       const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inText,date:inDate})});
       if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
@@ -1014,6 +1037,8 @@ function App(){
       await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}]);
       const updated=await sbGet('sessions','order=date.desc');
       setSess(updated);setPOk('Saved '+fd(inDate));
+      const unclassified=findUnclassified(parsed.blocks||[]);
+      if(unclassified.length)setPWarn(unclassified.length+' movement'+(unclassified.length>1?'s':'')+" couldn't be classified: "+unclassified.join(', '));
       const bm=detectBenchmark(inText,parsed.blocks||[]);
       if(bm)setPendingBenchmark({...bm,date:inDate});
       setInText('');setInHappy('');setInFun('');setExp(inDate);
@@ -1106,6 +1131,7 @@ function App(){
         </button></div>
         ${pErr&&html`<div class="err" style="margin-top:8px">${pErr}</div>`}
         ${pOk&&html`<div class="ok">${pOk}</div>`}
+        ${pWarn&&html`<div class="warn">${pWarn}</div>`}
         ${pendingBenchmark&&html`<div style="margin-top:12px;padding:12px 14px;background:#FCECD5;border:1px solid #E8871E;border-radius:7px">
           <div style="font-size:11px;font-weight:700;color:#E8871E;margin-bottom:4px">Benchmark detected: ${pendingBenchmark.name}</div>
           <div style="font-size:11px;color:#9BA3AC;margin-bottom:8px">Score: ${pendingBenchmark.score||'(no score)'} · ${fd(pendingBenchmark.date)}</div>
