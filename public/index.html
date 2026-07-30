@@ -86,12 +86,13 @@ async function sbDel(t,m){await fetch(SB_URL+'/rest/v1/'+t+'?'+m,{method:'DELETE
 function cls(nm){
   const n=(nm||'').toLowerCase().trim();
   if(!n)return{pat:null,sub:null,mod:null};
-  // Carries/Holds
-  if(/sled/.test(n))return{pat:null,sub:null,mod:'carries'};
+  // Carries/Holds — grip-and-carry loaded work counts as pulling strength, same rationale as the
+  // sandbag carry/hold classification below
+  if(/sled/.test(n))return{pat:'pull',sub:null,mod:'carries'};
   // Farmer-position lunge: held like a carry but the movement itself is a single-leg squat, not a carry
   if(/farmers?\s*reverse\s*lunge|reverse\s*lunge.*farmers?/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
-  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|\bsb\s*carry\b|sandbag\s*hold|\bsb\s*hold\b|bear\s*hug|waiter\s*carry/.test(n))return{pat:null,sub:null,mod:'carries'};
-  if(/static\s*hold|dead\s*hang/.test(n))return{pat:null,sub:null,mod:'carries'};
+  if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|\bsb\s*carry\b|sandbag\s*hold|\bsb\s*hold\b|bear\s*hug|waiter\s*carry/.test(n))return{pat:'pull',sub:null,mod:'carries'};
+  if(/static\s*hold|dead\s*hang/.test(n))return{pat:'pull',sub:null,mod:'carries'};
   // Monostructural — machines
   if(/^cal\s|cal\s*row|cal\s*ski/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
   if(/\b(ski|bike|assault|echo)\b/.test(n))return{pat:null,sub:'machines',mod:'monostructural'};
@@ -107,7 +108,12 @@ function cls(nm){
   if(/single\s*under|jump\s*rope/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   if(/broad\s*jump|lateral\s*bound/.test(n))return{pat:null,sub:'bounding',mod:'monostructural'};
   // Core
-  if(n==='ttb'||n==='t2b'||/toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
+  // Word-boundary match (not exact-string) so "Kipping T2B" still hits Toes to Bar before the
+  // generic "kipping" pull-up rule below gets a chance at it.
+  if(/\bttb\b|\bt2b\b|toes\s*to\s*bar/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
+  // Plank Row is a row done in a plank position — a pull, not a core hold — so it must be excluded
+  // from the generic "plank" match below.
+  if(/plank\s*rows?/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
   if(/ghd|sit.?up|l-sit|plank|v-up|ab\s*mat|k2e|knee.*elbow|hollow|leg\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/\bhkr\b|hanging\s*knee\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   // Pull — vertical (BMU before generic muscle-up)
@@ -136,9 +142,12 @@ function cls(nm){
   if(/wall\s*ball/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/goblet\s*lunge/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
   if(/\bbsu\b|box\s*step.?up/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
-  if(/pistol|lunge|step.?up|split\s*sq|bulgarian/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
-  if(/squat|ohs\b|overhead\s*sq|goblet/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
+  // Pistol is bodyweight, unlike the loaded single-leg variants below
+  if(/pistol/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
+  if(/lunge|step.?up|split\s*sq|bulgarian/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
+  // Air squat checked before the generic squat catch-all, since "air squat" also contains "squat"
   if(/air\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'gymnastics'};
+  if(/squat|ohs\b|overhead\s*sq|goblet/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   // Jerk
   if(/jerk/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   // Hinge
@@ -154,6 +163,7 @@ function cls(nm){
   if(/hs\s*walk|handstand\s*walk/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
   if(/s2oh|shoulder\s*to/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
   if(/tricep/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
+  if(/side\s*raises?|lateral\s*raises?/.test(n))return{pat:'push',sub:null,mod:'weightlifting'};
   if(/ring\s*dip/.test(n))return{pat:'push',sub:'horizontal',mod:'gymnastics'};
   if(/\bdip/.test(n))return{pat:'push',sub:'vertical',mod:'gymnastics'};
   if(/press/.test(n)&&!/bench|floor/.test(n))return{pat:'push',sub:'vertical',mod:'weightlifting'};
