@@ -834,6 +834,7 @@ function App(){
   const[rngDeferred,setRngDeferred]=useState('all');
   function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
   const[mvRng,setMvRng]=useState('all');
+  const[mtRng,setMtRng]=useState('all');
   const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
   function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
   const[mtSlots,setMtSlots]=useState(()=>{
@@ -938,6 +939,10 @@ function App(){
   // Movement Detail aggregation — independent range, decoupled from the page-level Week/Month/Quarter/Year/All toggle
   const mvP=useMemo(()=>calPeriod(mvRng,0),[mvRng]);
   const mvAgg=useMemo(()=>agg(sess,mvP.start,mvP.end),[sess,mvP]);
+
+  // Movement Group Totals aggregation — its own independent range too
+  const mtP=useMemo(()=>calPeriod(mtRng,0),[mtRng]);
+  const mtAgg=useMemo(()=>agg(sess,mtP.start,mtP.end),[sess,mtP]);
 
   // Sparkline periods — capped at 4, driven by rngDeferred
   const spCount=4;
@@ -1470,11 +1475,17 @@ function App(){
         })()}
       </div>
       <div class="card">
-        <div class="ct">Movement Group Totals</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="ct" style="margin-bottom:0">Movement Group Totals</div>
+          <div style="display:flex;gap:3px">
+            ${[['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year'],['all','All']].map(([k,l])=>
+              html`<button class="rn ${mtRng===k?'act':''}" onClick=${()=>setMtRng(k)}>${l}</button>`)}
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
           ${mtSlots.map((key,i)=>{
             const cat=MOVEMENT_CATEGORIES[key];
-            const val=volAgg.movementTotals[key]||0;
+            const val=mtAgg.movementTotals[key]||0;
             const isOpen=mtOpenDesc===key;
             const isEditing=mtEditSlot===i;
             const usedElsewhere=new Set(mtSlots.filter((k,idx)=>idx!==i));
