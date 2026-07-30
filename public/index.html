@@ -834,7 +834,7 @@ function App(){
   const[rngDeferred,setRngDeferred]=useState('all');
   function handleSetRng(k){setRng(k);if(_rngTimer)clearTimeout(_rngTimer);_rngTimer=setTimeout(()=>setRngDeferred(k),50);}
   const[mvRng,setMvRng]=useState('all');
-  const[mtRng,setMtRng]=useState('all');
+  const[mtRng,setMtRng]=useState('week');
   const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
   function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
   const[mtSlots,setMtSlots]=useState(()=>{
