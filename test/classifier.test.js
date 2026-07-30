@@ -25,8 +25,8 @@ const document = { getElementById: () => ({}) };
 const h = () => {}; const render = () => {}; const htm = { bind: () => () => {} };
 const useState = (x) => [x, () => {}]; const useEffect = () => {}; const useMemo = (f) => f();
 `;
-new Function(stub + src + `;globalThis.__classifierTest = { cls, clsAll, normMov, clsAllCached, findUnclassified };`)();
-const { clsAll, normMov, findUnclassified } = globalThis.__classifierTest;
+new Function(stub + src + `;globalThis.__classifierTest = { cls, clsAll, normMov, clsAllCached, findUnclassified, MOVEMENT_CATEGORIES };`)();
+const { clsAll, normMov, findUnclassified, MOVEMENT_CATEGORIES } = globalThis.__classifierTest;
 
 let pass = 0, fail = 0;
 function check(label, fn) {
@@ -89,6 +89,8 @@ const SINGLE = [
   ['Burpees over the bar', { pat: 'push', sub: 'horizontal', mod: 'gymnastics' }],
   ['SB Walk', { pat: 'pull', sub: 'horizontal', mod: 'carries' }],
   ['Sandbag Carry', { pat: 'pull', sub: 'horizontal', mod: 'carries' }],
+  // Held object must not override the actual movement (same rationale as farmer-position lunges)
+  ['Reverse Lunge Wall Ball', { pat: 'squat', sub: 'single_leg', mod: 'weightlifting' }],
 ];
 
 for (const [name, expected] of SINGLE) {
@@ -125,6 +127,24 @@ const COMPOUND = [
     { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
     { pat: 'push', sub: 'horizontal', mod: 'gymnastics' },
   ]],
+  // "+"-joined complexes: each named lift classified separately and combined, so a complex neither
+  // over-credits (whichever lift matches first stealing the whole thing) nor under-credits (a lift
+  // later in the string never getting checked at all) its component patterns.
+  ['Low Hang Power Clean + Hang Squat Clean + Push Press', [
+    { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+    { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+    { pat: 'squat', sub: 'traditional', mod: 'weightlifting', dualTon: true },
+    { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+  ]],
+  ['Power Snatch + Power Snatch + OHS', [
+    { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+    { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+    { pat: 'squat', sub: 'traditional', mod: 'weightlifting', dualTon: true },
+  ]],
 ];
 
 for (const [name, expected] of COMPOUND) {
@@ -144,6 +164,8 @@ const NORM = [
   ['Plank', 'Plank'],
   ['Side Plank', 'Side Plank'], // must NOT merge into Plank
   ['DBL DB Farmers Reverse Lunge', 'Double DB Reverse Lunge'],
+  ['Reverse Lunge Wall Ball', 'Reverse Lunge WB'],
+  ['Reverse Lunge WB', 'Reverse Lunge WB'],
   ['Reverse Lunge', 'Reverse Lunge'],
   ['Reverse Lunges', 'Reverse Lunge'],
   ['SA OH Reverse Lunge', 'SA OH Reverse Lunge'], // must NOT merge into Reverse Lunge
@@ -193,6 +215,42 @@ check('findUnclassified returns empty for a fully-recognized workout', () => {
   ];
   assert.strictEqual(findUnclassified(blocks).length, 0);
 });
+
+// ── MOVEMENT_CATEGORIES: the Home-tab Movement Totals card ──
+// match() returns a COUNT, not a boolean — verifying this matters specifically for "+"-joined
+// complexes that contain the same category twice (two separate squat catches, two separate cleans
+// in one logged entry), which must credit twice, not once.
+const MT_CASES = [
+  ['Back Squat', 'squats', 1],
+  ['Split Squat', 'squats', 0], // single-leg, must not count as a traditional squat
+  ['Floating Hang Squat Clean + Squat Clean + Jerk', 'squats', 2],
+  ['Floating Hang Squat Clean + Squat Clean + Jerk', 'cleans', 2],
+  ['Low Hang Power Clean + Hang Squat Clean + Push Press', 'cleans', 2],
+  ['Low Hang Power Clean + Hang Squat Clean + Push Press', 'squats', 1],
+  ['Low Hang Power Clean + Hang Squat Clean + Push Press', 'shoulder_to_oh', 1],
+  ['Power Snatch + Power Snatch + OHS', 'snatches', 2],
+  ['Power Snatch + Power Snatch + OHS', 'squats', 1],
+  ['Rope Climbs', 'pullups', 0], // shares pull/vertical/gymnastics with pull-ups but is not one
+  ['Pull-Up', 'pullups', 1],
+  ['Burpee Pull Ups', 'burpees', 1],
+  ['Burpee Pull Ups', 'pullups', 1], // counts toward both, by design
+  ['Cal Row', 'machine_cals', 1],
+  ['Cal Row', 'machine_dist', 0],
+  ['500m Row', 'machine_dist', 1],
+  ['500m Row', 'machine_cals', 0],
+  ['Thruster', 'shoulder_to_oh', 1], // the overhead-press portion of a compound lift counts
+  ['Wall Walk', 'hspu', 0], // shares push/vertical/gymnastics with HSPU but is not one
+  ['Strict HSPU', 'hspu', 1],
+  ['Snatch Deadlift to Hip', 'deadlifts', 0], // contains "deadlift" but is a snatch-pull drill, not a deadlift
+  ['Snatch Deadlift to Hip', 'snatches', 1],
+  ['DBL DB DL', 'deadlifts', 1], // DL abbreviation
+];
+for (const [name, key, expected] of MT_CASES) {
+  check(`MOVEMENT_CATEGORIES.${key}("${name}")`, () => {
+    const got = MOVEMENT_CATEGORIES[key].match(name, clsAll(name)) || 0;
+    assert.strictEqual(got, expected, `got ${got}, want ${expected}`);
+  });
+}
 
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail > 0) process.exit(1);

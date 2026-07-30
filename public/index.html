@@ -140,6 +140,9 @@ function cls(nm){
   // Squat — single-leg variants checked BEFORE the generic squat catch-all, since names like
   // "Split Squat" and "Bulgarian Split Squat" contain the literal word "squat" and would otherwise
   // be misclassified as traditional squat.
+  // Lunge holding a wall ball: the held object is not the movement — same rationale as the
+  // farmer-position reverse lunge fix above.
+  if(/lunge.*wall\s*ball|wall\s*ball.*lunge/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
   if(/wall\s*ball/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
   if(/goblet\s*lunge/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
   if(/\bbsu\b|box\s*step.?up/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
@@ -197,6 +200,23 @@ function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
   const isDB=/(^|\s)(sa\s*|dbl\s*|double\s*|alt\s*)?(db|dumbbell|kb|kettlebell)/.test(n);
 
+  // ── Barbell/gymnastics complex: several distinct named lifts joined by "+", one rep of each per
+  // round (e.g. "Power Clean + Hang Squat Clean + Push Press"). Classify each named lift on its own
+  // and combine, rather than matching the whole string against a single rule — otherwise whichever
+  // lift's name happens to match first wins the entire complex's classification, silently crediting
+  // (or omitting) reps for lifts that were never actually checked. Every named lift's own primary
+  // pattern gets full tonnage credit, since the same load moves through each one in turn.
+  if(/\s\+\s/.test(nm||'')){
+    const parts=(nm||'').split(/\s\+\s/).map(p=>p.trim()).filter(Boolean);
+    if(parts.length>1){
+      const combined=[];
+      parts.forEach(part=>{
+        clsAll(part).forEach((c,i)=>combined.push(i===0?{...c,dualTon:true}:c));
+      });
+      return combined;
+    }
+  }
+
   // ── Compound gymnastics / odd-object ──
   if(/thrusters?/.test(n))return[SQ,PVd];
   if(/\bbbjo\b|burpee\s*box\s*jump\s*over/.test(n))return[PH,BD];
@@ -248,6 +268,13 @@ function clsAll(nm){
 // ══════ MOVEMENT NAME NORMALIZER ══════
 function normMov(nm){
   if(!nm)return nm;
+  // Barbell/gymnastics complex: normalize each named lift individually and rejoin, so distinct
+  // complexes stay distinct instead of all collapsing to whichever lift's name a rule happens to
+  // match first (mirrors the matching fix in clsAll above — same root cause, same fix shape).
+  if(/\s\+\s/.test(nm)){
+    const parts=nm.split(/\s\+\s/).map(p=>p.trim()).filter(Boolean);
+    if(parts.length>1)return parts.map(p=>normMov(p)||p).join(' + ');
+  }
   const n=nm.toLowerCase().trim();
   // Toes to bar
   if(/^t2b$|^ttb$|toes\s*to\s*bar/.test(n))return'Toes to Bar';
@@ -298,6 +325,9 @@ function normMov(nm){
   if(/strict\s*hspu|strict\s*handstand\s*push.?up/.test(n))return'Strict HSPU';
   if(/\bhspu\b|handstand\s*push.?up/.test(n))return'HSPU';
   if(/wall\s*walk/.test(n))return'Wall Walk';
+  // Reverse lunge holding a wall ball — consolidate spelled-out and WB-abbreviated phrasing before
+  // the generic wall-ball rule below claims it as a plain standing Wall Ball.
+  if(/reverse\s*lunge.*wall\s*ball|wall\s*ball.*reverse\s*lunge|reverse\s*lunge\s*wb\b/.test(n))return'Reverse Lunge WB';
   if(/wall\s*ball/.test(n))return'Wall Ball';
   if(/push.?up/.test(n)&&!/(ring|bar|hand\s*release|hrpu)/.test(n))return'Push-Up';
   if(/^hrpu$|hand\s*release\s*push/.test(n))return'Hand Release Push-Up';
@@ -365,6 +395,79 @@ const PATS={push:{l:'Push',c:'#FF5D73'},pull:{l:'Pull',c:'#4FA8D8'},squat:{l:'Sq
 const MODS={weightlifting:{l:'Weightlifting',c:'#FFC145'},gymnastics:{l:'Gymnastics',c:'#4FA8D8'},monostructural:{l:'Monostructural',c:'#9BA3AC'},carries:{l:'Carries/Holds',c:'#A78BFA'}};
 const PK=Object.keys(PATS);
 const MK=Object.keys(MODS);
+
+// ══════ MOVEMENT TOTALS — curated cross-movement categories ══════
+// Each of these combines several distinct movements into one number that Movement Detail can't
+// show directly (it shows one row per movement, never a combined total). Matching is deliberately
+// against the RAW logged name, not the post-normMov canonical name — canonicalization sometimes
+// collapses distinctions these categories need (e.g. "Cal Row" and "500m Row" both become "Row").
+//
+// Every match() returns a COUNT, not a boolean — a "+"-joined complex can genuinely contain the
+// same category twice (e.g. "Floating Hang Squat Clean + Squat Clean + Jerk" is two separate squat
+// catches and two separate cleans in one entry), and reps get credited once per occurrence, same
+// as the pR pattern totals elsewhere in this file.
+function countNameMatches(raw,test){
+  if(/\s\+\s/.test(raw)){
+    return raw.split(/\s\+\s/).map(p=>p.trim()).filter(Boolean).reduce((n,p)=>n+(test(p)?1:0),0);
+  }
+  return test(raw)?1:0;
+}
+const MOVEMENT_CATEGORIES={
+  squats:{label:'Squats',color:'#FFC145',fmt:'int',
+    desc:'Any squat — Air Squat, Back Squat, Front Squat, Thruster, Wall Ball, OHS, Squat Clean, and more.',
+    match:(raw,cs)=>cs.filter(c=>c.pat==='squat'&&c.sub==='traditional').length},
+  burpees:{label:'Burpees',color:'#FF5D73',fmt:'int',
+    desc:'Every burpee variation — standard, over the bar, to target, box jump, burpee pull-ups, and any other variation.',
+    match:(raw)=>countNameMatches(raw,p=>/burpee/i.test(p))},
+  pullups:{label:'Pull-Ups',color:'#4FA8D8',fmt:'int',
+    desc:'Pull-Up, Chest to Bar, Bar Muscle-Up, Ring Muscle-Up, burpee pull-ups, and any other pull-up variation.',
+    match:(raw,cs)=>{
+      if(/rope/i.test(raw))return 0;
+      const patCount=cs.filter(c=>c.pat==='pull'&&c.sub==='vertical'&&c.mod==='gymnastics').length;
+      return patCount+countNameMatches(raw,p=>/burpee.*pull/i.test(p));
+    }},
+  miles_run:{label:'Miles Run',color:'#9BA3AC',fmt:'mi',
+    desc:'Every Run entry, converted to miles.',
+    match:(raw)=>normMov(raw)==='Run'?1:0},
+  machine_cals:{label:'Machine Cals',color:'#A78BFA',fmt:'int',
+    desc:'Calories from Row, Ski Erg, and Bike.',
+    match:(raw)=>{const c=normMov(raw);return(c==='Row'||c==='Ski Erg'||c==='Bike')&&/\bcal(orie)?s?\b/i.test(raw)?1:0;}},
+  machine_dist:{label:'Machine Meters',color:'#84CC16',fmt:'int',
+    desc:'Meters from Row, Ski Erg, and Bike.',
+    match:(raw)=>{const c=normMov(raw);return(c==='Row'||c==='Ski Erg'||c==='Bike')&&!/\bcal(orie)?s?\b/i.test(raw)?1:0;}},
+  cleans:{label:'Cleans',color:'#FF9F5A',fmt:'int',
+    desc:'Any clean — Power Clean, Squat Clean, Clean & Jerk, and barbell/DB/KB variations.',
+    match:(raw)=>countNameMatches(raw,p=>/\bclean/i.test(p)||/c\s*&\s*j\b/i.test(p))},
+  snatches:{label:'Snatches',color:'#5AC8C8',fmt:'int',
+    desc:'Any snatch — Power Snatch, Squat Snatch, and barbell/DB/KB variations.',
+    match:(raw)=>countNameMatches(raw,p=>/snatch/i.test(p)||/\bhps\b/i.test(p))},
+  box_jumps:{label:'Box Jumps',color:'#E8871E',fmt:'int',
+    desc:'Box Jump, Box Jump Over, and burpee box jump overs.',
+    match:(raw)=>countNameMatches(raw,p=>/box\s*jump/i.test(p)||/\bb?bjo\b/i.test(p))},
+  lunges:{label:'Lunges',color:'#D4779E',fmt:'int',
+    desc:'Any lunge — Reverse Lunge, Walking Lunge, Goblet Lunge, and other lunge variations.',
+    match:(raw)=>countNameMatches(raw,p=>/lunge/i.test(p))},
+  shoulder_to_oh:{label:'Shoulder to OH',color:'#7C93C4',fmt:'int',
+    desc:'Strict Press, Push Press, Jerk, and the overhead-press portion of Thrusters, Clusters, and other complexes.',
+    match:(raw,cs)=>cs.filter(c=>c.pat==='push'&&c.sub==='vertical'&&c.mod==='weightlifting').length},
+  hspu:{label:'HSPU',color:'#B48EAD',fmt:'int',
+    desc:'HSPU and Strict HSPU combined.',
+    match:(raw)=>countNameMatches(raw,p=>/hspu|handstand\s*push/i.test(p))},
+  deadlifts:{label:'Deadlifts',color:'#6FA86F',fmt:'int',
+    desc:'Deadlift, RDL, Good Morning, and DB/KB deadlift variations.',
+    match:(raw)=>countNameMatches(raw,p=>/deadlift|\brdl\b|\bdl\b|romanian|good\s*morn/i.test(p)&&!/snatch/i.test(p))},
+};
+const MOVEMENT_CATEGORY_KEYS=Object.keys(MOVEMENT_CATEGORIES);
+const DEFAULT_MOVEMENT_SLOTS=['squats','burpees','pullups','miles_run','machine_cals','machine_dist'];
+function fmtMovementTotal(v,fmt){
+  if(fmt==='mi')return(v/1609).toFixed(1);
+  return Math.round(v).toLocaleString();
+}
+function hexToRgba(hex,alpha){
+  const h=hex.replace('#','');
+  const r=parseInt(h.substring(0,2),16),g=parseInt(h.substring(2,4),16),b=parseInt(h.substring(4,6),16);
+  return`rgba(${r},${g},${b},${alpha})`;
+}
 
 // ══════ HELPERS ══════
 function fd(d){if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
@@ -545,6 +648,14 @@ function agg(sessions,start,end){
   const filt=sessions.filter(s=>(!start||s.date>=start)&&(!end||s.date<=end));
   const pF={},pT={},pR={},mF={},mT={},mR={},sF={},sT={},td={short:0,med:0,long:0},mvs={};
   const byPat={},byMod={};
+  const movementTotals={};
+  function noteMovementTotals(rawNm,cs,reps){
+    if(!rawNm)return;
+    for(const key of MOVEMENT_CATEGORY_KEYS){
+      const n=MOVEMENT_CATEGORIES[key].match(rawNm,cs)||0;
+      if(n>0)movementTotals[key]=(movementTotals[key]||0)+reps*n;
+    }
+  }
   const mood={happy:0,neutralH:0,unhappy:0,hTotal:0,fun:0,neutralF:0,notfun:0,fTotal:0};
   let primaryTon=0;
   function add(pat,sub,mod,reps,ton,isPrimary,rawNm){
@@ -599,6 +710,7 @@ function agg(sessions,start,end){
         const ton=calcStrengthTon(b.sets,b.score)/dDiv;
         cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,i===0,b.mov));
         note(b.mov,cs,reps,ton,sess.date);
+        noteMovementTotals(b.mov,cs,reps);
       }
       if(b.k==='metcon'){
         const tdv=blockTd(b)||'unk';if(td[tdv]!==undefined)td[tdv]++;
@@ -608,6 +720,7 @@ function agg(sessions,start,end){
           const pr=(parseFloat(pm.r)||0)/dDiv;const pw=parseFloat(pm.w)||0;
           cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,i===0,pm.n));
           note(pm.n,cs,pr,pr*pw,sess.date);
+          noteMovementTotals(pm.n,cs,pr);
         }
       }
     }
@@ -622,7 +735,7 @@ function agg(sessions,start,end){
     d.mods.sort((a,b)=>b.ton-a.ton);
     mvsFinal[nm]={...d,freq:d.freq.size,pat:d.pats[0]?.pat||null,sub:d.pats[0]?.sub||null,mod:d.mods[0]?.mod||null};
   }
-  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood,primaryTon,byPat,byMod};
+  return{pF,pT,pR,mF,mT,mR,sF,sT,td,mvs:mvsFinal,cnt:filt.length,mood,primaryTon,byPat,byMod,movementTotals};
 }
 
 // ══════ CONSECUTIVE DAYS ══════
@@ -723,6 +836,17 @@ function App(){
   const[mvRng,setMvRng]=useState('all');
   const[mvSort,setMvSort]=useState({col:'reps',dir:'desc'});
   function handleMvSort(col){setMvSort(s=>({col,dir:s.col===col&&s.dir==='desc'?'asc':'desc'}));}
+  const[mtSlots,setMtSlots]=useState(()=>{
+    try{
+      const saved=JSON.parse(localStorage.getItem('movementTotalsSlots')||'null');
+      if(Array.isArray(saved)&&saved.length===6&&saved.every(k=>MOVEMENT_CATEGORIES[k]))return saved;
+    }catch(e){}
+    return DEFAULT_MOVEMENT_SLOTS;
+  });
+  useEffect(()=>{try{localStorage.setItem('movementTotalsSlots',JSON.stringify(mtSlots));}catch(e){}},[mtSlots]);
+  const[mtOpenDesc,setMtOpenDesc]=useState(null);
+  const[mtEditSlot,setMtEditSlot]=useState(null);
+  function setMovementSlot(i,key){setMtSlots(s=>s.map((k,idx)=>idx===i?key:k));setMtEditSlot(null);}
   const[inDate,setInDate]=useState(new Date().toISOString().slice(0,10));
   const[inText,setInText]=useState('');
   const[inHappy,setInHappy]=useState('');
@@ -1257,6 +1381,47 @@ function App(){
         <div class="sc"><div class="sv">${volAgg.cnt}</div><div class="sl">Sessions</div></div>
         <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+'k':'0'}</div><div class="sl">Pounds Moved</div></div>
         <div class="sc"><div class="sv">${Object.keys(volAgg.mvs).length}</div><div class="sl">Unique Moves</div></div>
+      </div>
+      <div class="card">
+        <div class="ct">Movement Totals</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+          ${(()=>{
+            // Bar proportions compare the DISPLAYED value (e.g. miles), not the raw stored value
+            // (meters) — otherwise Miles Run's raw meters count dwarfs everything else and the bar
+            // stops meaning anything.
+            const mtDisplayVals=mtSlots.map(k=>{const c=MOVEMENT_CATEGORIES[k];const v=volAgg.movementTotals[k]||0;return c.fmt==='mi'?v/1609:v;});
+            const mtMax=Math.max(...mtDisplayVals,1);
+            return mtSlots.map((key,i)=>{
+            const cat=MOVEMENT_CATEGORIES[key];
+            const val=volAgg.movementTotals[key]||0;
+            const barPct=Math.max(4,Math.round((mtDisplayVals[i]/mtMax)*100));
+            const isOpen=mtOpenDesc===key;
+            const isEditing=mtEditSlot===i;
+            const usedElsewhere=new Set(mtSlots.filter((k,idx)=>idx!==i));
+            const availableKeys=MOVEMENT_CATEGORY_KEYS.filter(k=>k===key||!usedElsewhere.has(k));
+            return html`<div style=${{background:hexToRgba(cat.color,0.14),borderRadius:'10px',padding:'12px 14px',cursor:isEditing?'default':'pointer'}} onClick=${()=>!isEditing&&setMtOpenDesc(isOpen?null:key)}>
+              ${isEditing?html`
+                <div class="mut" style="margin-bottom:6px">Choose a metric</div>
+                <select style="width:100%;font-size:12px" onClick=${e=>e.stopPropagation()} onChange=${e=>setMovementSlot(i,e.target.value)} onBlur=${()=>setMtEditSlot(null)} value=${key}>
+                  ${availableKeys.map(k=>html`<option value=${k}>${MOVEMENT_CATEGORIES[k].label}</option>`)}
+                </select>
+              `:html`
+                <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                  <span style=${{display:'inline-block',width:'9px',height:'9px',borderRadius:'50%',background:cat.color}}></span>
+                  <span style="font-size:12px;color:#B8C1CC" title="Change metric" onClick=${e=>{e.stopPropagation();setMtEditSlot(i);}}>✎</span>
+                </div>
+                <div style="font-size:24px;font-weight:700;color:#2B2825;margin-top:6px">${fmtMovementTotal(val,cat.fmt)}</div>
+                <div style="font-size:11px;color:#6B6B65;text-transform:uppercase;letter-spacing:1px;margin-top:2px">${cat.label}</div>
+                <div style=${{height:'3px',borderRadius:'2px',background:cat.color,marginTop:'8px',width:barPct+'%'}}></div>
+              `}
+            </div>`;
+            });
+          })()}
+        </div>
+        ${mtOpenDesc&&html`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #E0D9CF;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div><span style="font-size:11px;font-weight:700;color:#2B2825">${MOVEMENT_CATEGORIES[mtOpenDesc].label}</span><span style="font-size:11px;color:#6B6B65;margin-left:6px">${MOVEMENT_CATEGORIES[mtOpenDesc].desc}</span></div>
+          <span style="font-size:11px;color:#B8C1CC;cursor:pointer;flex-shrink:0" onClick=${()=>setMtOpenDesc(null)}>✕</span>
+        </div>`}
       </div>
       <div class="g2">
         <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${patFD} onPick=${d=>setBubbleDrill({kind:'patFreq',key:d.key,label:d.label,total:d.val})}/></div>
