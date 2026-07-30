@@ -992,7 +992,7 @@ function App(){
     const q90=calPeriod('quarter',0);const tdAgg=agg(sess,q90.start,q90.end);
     const patternBalance=PK.map(k=>{
       const f=allAgg.pF[k]||0;const t=allAgg.pT[k]||0;
-      return PATS[k].l+': '+f+' sessions, '+(t>0?Math.round(t/1000)+'k lbs tonnage':'-');
+      return PATS[k].l+': '+f+' sessions, '+(t>0?Math.round(t/1000)+'k pounds moved':'-');
     }).join('\n');
     const timeDomain='Short (<10min): '+tdAgg.td.short+' | Medium (10-20min): '+tdAgg.td.med+' | Long (20min+): '+tdAgg.td.long;
     const mvList=Object.entries(allAgg.mvs).map(([n,d])=>({n,...d})).sort((a,b)=>b.freq-a.freq).slice(0,20);
@@ -1255,7 +1255,7 @@ function App(){
       </div>
       <div class="g3" style="margin-bottom:14px">
         <div class="sc"><div class="sv">${volAgg.cnt}</div><div class="sl">Sessions</div></div>
-        <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+'k':'0'}</div><div class="sl">Tonnage (lbs)</div></div>
+        <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+'k':'0'}</div><div class="sl">Pounds Moved</div></div>
         <div class="sc"><div class="sv">${Object.keys(volAgg.mvs).length}</div><div class="sl">Unique Moves</div></div>
       </div>
       <div class="g2">
@@ -1263,7 +1263,7 @@ function App(){
         <div class="card"><div class="ct">Modality Frequency</div><${HBar} data=${modFD} onPick=${d=>setBubbleDrill({kind:'modFreq',key:d.key,label:d.label,total:d.val})}/></div>
       </div>
       <div class="g2">
-        <div class="card"><div class="ct">Tonnage by Pattern</div><${HBar} data=${patTD} onPick=${d=>setBubbleDrill({kind:'patTon',key:d.key,label:d.label,total:d.val})}/></div>
+        <div class="card"><div class="ct">Pounds Moved by Pattern</div><${HBar} data=${patTD} onPick=${d=>setBubbleDrill({kind:'patTon',key:d.key,label:d.label,total:d.val})}/></div>
         <div class="card"><div class="ct">Time Domain</div><${Donut} data=${tdD} onPick=${d=>setBubbleDrill({kind:'timeDomain',key:d.key,label:d.label,total:d.val})}/></div>
       </div>
       <div class="card">
@@ -1284,12 +1284,12 @@ function App(){
           };
           const rows=[
             {label:'Sessions',fn:d=>d.cnt,fmt:'n'},
-            {label:'Tonnage',fn:d=>Math.round(d.primaryTon||0),fmt:'ton'},
+            {label:'Pounds Moved',fn:d=>Math.round(d.primaryTon||0),fmt:'ton'},
             {label:'—',fn:null},
-            {label:'Push Tonnage',fn:d=>Math.round(d.pT.push||0),fmt:'ton'},
-            {label:'Pull Tonnage',fn:d=>Math.round(d.pT.pull||0),fmt:'ton'},
-            {label:'Squat Tonnage',fn:d=>Math.round(d.pT.squat||0),fmt:'ton'},
-            {label:'Hinge Tonnage',fn:d=>Math.round(d.pT.hinge||0),fmt:'ton'},
+            {label:'Pounds Moved (Push)',fn:d=>Math.round(d.pT.push||0),fmt:'ton'},
+            {label:'Pounds Moved (Pull)',fn:d=>Math.round(d.pT.pull||0),fmt:'ton'},
+            {label:'Pounds Moved (Squat)',fn:d=>Math.round(d.pT.squat||0),fmt:'ton'},
+            {label:'Pounds Moved (Hinge)',fn:d=>Math.round(d.pT.hinge||0),fmt:'ton'},
             {label:'Miles Run',fn:d=>d.mvs['Run']?.reps||0,fmt:'mi'},
             {label:'—',fn:null},
             {label:'Weightlifting',fn:d=>d.mF.weightlifting||0,fmt:'n'},
@@ -1354,7 +1354,7 @@ function App(){
           </div>
         </div>
         <div style="overflow-y:auto;max-height:480px">
-        <table style="position:relative"><thead style="position:sticky;top:0;background:#FFFFFF;z-index:1"><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Tonnage',true],['last','Last',false]].map(([col,lbl,right])=>{
+        <table style="position:relative"><thead style="position:sticky;top:0;background:#FFFFFF;z-index:1"><tr>${[['n','Movement',false],['pat','Pattern',false],['mod','Modality',false],['freq','Freq',true],['reps','Reps',true],['avg','Avg Load',true],['ton','Lbs Moved',true],['last','Last',false]].map(([col,lbl,right])=>{
           const active=mvSort.col===col;const arrow=active?(mvSort.dir==='desc'?'↓':'↑'):'↕';
           return html`<th style=${{textAlign:right?'right':'left',cursor:'pointer',userSelect:'none',color:active?'#2B2825':'#9BA3AC'}} onClick=${()=>handleMvSort(col)}>${lbl} <span style="font-size:9px;opacity:${active?1:0.4}">${arrow}</span></th>`;
         })}</tr></thead>
@@ -1413,7 +1413,7 @@ function App(){
         } else if(kind==='timeDomain'){
           sessions=sess.filter(s=>s.date>=volP.start&&s.date<=volP.end&&(s.blocks||[]).some(b=>b.k==='metcon'&&blockTd(b)===bubbleDrill.key));
         }
-        const subtitle={patFreq:'Pattern Frequency',patTon:'Tonnage by Pattern',modFreq:'Modality Frequency',timeDomain:'Time Domain'}[kind];
+        const subtitle={patFreq:'Pattern Frequency',patTon:'Pounds Moved by Pattern',modFreq:'Modality Frequency',timeDomain:'Time Domain'}[kind];
         const totalLbl=kind==='patTon'?fmtTon(bubbleDrill.total)+' lbs':kind==='timeDomain'?bubbleDrill.total+' workout'+(bubbleDrill.total!==1?'s':''):bubbleDrill.total+' occurrence'+(bubbleDrill.total!==1?'s':'');
         return html`<div style="position:fixed;inset:0;background:rgba(30,42,58,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px" onClick=${close}>
           <div style="background:#FFFFFF;border-radius:12px;padding:20px 22px;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.2)" onClick=${e=>e.stopPropagation()}>
