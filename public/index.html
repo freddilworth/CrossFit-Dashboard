@@ -1382,47 +1382,6 @@ function App(){
         <div class="sc"><div class="sv">${totalTon>0?(totalTon/1000).toFixed(1)+'k':'0'}</div><div class="sl">Pounds Moved</div></div>
         <div class="sc"><div class="sv">${Object.keys(volAgg.mvs).length}</div><div class="sl">Unique Moves</div></div>
       </div>
-      <div class="card">
-        <div class="ct">Movement Totals</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
-          ${(()=>{
-            // Bar proportions compare the DISPLAYED value (e.g. miles), not the raw stored value
-            // (meters) — otherwise Miles Run's raw meters count dwarfs everything else and the bar
-            // stops meaning anything.
-            const mtDisplayVals=mtSlots.map(k=>{const c=MOVEMENT_CATEGORIES[k];const v=volAgg.movementTotals[k]||0;return c.fmt==='mi'?v/1609:v;});
-            const mtMax=Math.max(...mtDisplayVals,1);
-            return mtSlots.map((key,i)=>{
-            const cat=MOVEMENT_CATEGORIES[key];
-            const val=volAgg.movementTotals[key]||0;
-            const barPct=Math.max(4,Math.round((mtDisplayVals[i]/mtMax)*100));
-            const isOpen=mtOpenDesc===key;
-            const isEditing=mtEditSlot===i;
-            const usedElsewhere=new Set(mtSlots.filter((k,idx)=>idx!==i));
-            const availableKeys=MOVEMENT_CATEGORY_KEYS.filter(k=>k===key||!usedElsewhere.has(k));
-            return html`<div style=${{background:hexToRgba(cat.color,0.14),borderRadius:'10px',padding:'12px 14px',cursor:isEditing?'default':'pointer'}} onClick=${()=>!isEditing&&setMtOpenDesc(isOpen?null:key)}>
-              ${isEditing?html`
-                <div class="mut" style="margin-bottom:6px">Choose a metric</div>
-                <select style="width:100%;font-size:12px" onClick=${e=>e.stopPropagation()} onChange=${e=>setMovementSlot(i,e.target.value)} onBlur=${()=>setMtEditSlot(null)} value=${key}>
-                  ${availableKeys.map(k=>html`<option value=${k}>${MOVEMENT_CATEGORIES[k].label}</option>`)}
-                </select>
-              `:html`
-                <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                  <span style=${{display:'inline-block',width:'9px',height:'9px',borderRadius:'50%',background:cat.color}}></span>
-                  <span style="font-size:12px;color:#B8C1CC" title="Change metric" onClick=${e=>{e.stopPropagation();setMtEditSlot(i);}}>✎</span>
-                </div>
-                <div style="font-size:24px;font-weight:700;color:#2B2825;margin-top:6px">${fmtMovementTotal(val,cat.fmt)}</div>
-                <div style="font-size:11px;color:#6B6B65;text-transform:uppercase;letter-spacing:1px;margin-top:2px">${cat.label}</div>
-                <div style=${{height:'3px',borderRadius:'2px',background:cat.color,marginTop:'8px',width:barPct+'%'}}></div>
-              `}
-            </div>`;
-            });
-          })()}
-        </div>
-        ${mtOpenDesc&&html`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #E0D9CF;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-          <div><span style="font-size:11px;font-weight:700;color:#2B2825">${MOVEMENT_CATEGORIES[mtOpenDesc].label}</span><span style="font-size:11px;color:#6B6B65;margin-left:6px">${MOVEMENT_CATEGORIES[mtOpenDesc].desc}</span></div>
-          <span style="font-size:11px;color:#B8C1CC;cursor:pointer;flex-shrink:0" onClick=${()=>setMtOpenDesc(null)}>✕</span>
-        </div>`}
-      </div>
       <div class="g2">
         <div class="card"><div class="ct">Pattern Frequency</div><${HBar} data=${patFD} onPick=${d=>setBubbleDrill({kind:'patFreq',key:d.key,label:d.label,total:d.val})}/></div>
         <div class="card"><div class="ct">Modality Frequency</div><${HBar} data=${modFD} onPick=${d=>setBubbleDrill({kind:'modFreq',key:d.key,label:d.label,total:d.val})}/></div>
@@ -1509,6 +1468,37 @@ function App(){
               ${isOpen&&html`<div class="sd">${(s.blocks||[]).map(b=>html`<${RBlk} b=${b}/>`)}${s.raw_text&&html`<div class="note-block">${s.raw_text}</div>`}</div>`}
             </div>`;})}</div>`;
         })()}
+      </div>
+      <div class="card">
+        <div class="ct">Movement Group Totals</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+          ${mtSlots.map((key,i)=>{
+            const cat=MOVEMENT_CATEGORIES[key];
+            const val=volAgg.movementTotals[key]||0;
+            const isOpen=mtOpenDesc===key;
+            const isEditing=mtEditSlot===i;
+            const usedElsewhere=new Set(mtSlots.filter((k,idx)=>idx!==i));
+            const availableKeys=MOVEMENT_CATEGORY_KEYS.filter(k=>k===key||!usedElsewhere.has(k));
+            return html`<div style=${{background:hexToRgba(cat.color,0.14),borderRadius:'10px',padding:'12px 14px',cursor:isEditing?'default':'pointer'}} onClick=${()=>!isEditing&&setMtOpenDesc(isOpen?null:key)}>
+              ${isEditing?html`
+                <div class="mut" style="margin-bottom:6px">Choose a metric</div>
+                <select style="width:100%;font-size:12px" onClick=${e=>e.stopPropagation()} onChange=${e=>setMovementSlot(i,e.target.value)} onBlur=${()=>setMtEditSlot(null)} value=${key}>
+                  ${availableKeys.map(k=>html`<option value=${k}>${MOVEMENT_CATEGORIES[k].label}</option>`)}
+                </select>
+              `:html`
+                <div style="text-align:right">
+                  <span style="font-size:12px;color:#B8C1CC" title="Change metric" onClick=${e=>{e.stopPropagation();setMtEditSlot(i);}}>✎</span>
+                </div>
+                <div style="font-size:24px;font-weight:700;color:#2B2825;margin-top:6px">${fmtMovementTotal(val,cat.fmt)}</div>
+                <div style="font-size:11px;color:#6B6B65;text-transform:uppercase;letter-spacing:1px;margin-top:2px">${cat.label}</div>
+              `}
+            </div>`;
+          })}
+        </div>
+        ${mtOpenDesc&&html`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #E0D9CF;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div><span style="font-size:11px;font-weight:700;color:#2B2825">${MOVEMENT_CATEGORIES[mtOpenDesc].label}</span><span style="font-size:11px;color:#6B6B65;margin-left:6px">${MOVEMENT_CATEGORIES[mtOpenDesc].desc}</span></div>
+          <span style="font-size:11px;color:#B8C1CC;cursor:pointer;flex-shrink:0" onClick=${()=>setMtOpenDesc(null)}>✕</span>
+        </div>`}
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
