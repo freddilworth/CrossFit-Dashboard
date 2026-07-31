@@ -73,15 +73,115 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 import{h,render}from'https://esm.sh/preact@10.19.3';
 import{useState,useEffect,useMemo}from'https://esm.sh/preact@10.19.3/hooks';
 import htm from'https://esm.sh/htm@3.1.1';
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 const html=htm.bind(h);
 
 // ══════ SUPABASE ══════
-let SB_URL='',SB_KEY='';
-async function sbInit(){try{const r=await fetch('/api/config');const d=await r.json();SB_URL=d.supabaseUrl;SB_KEY=d.supabaseKey;}catch(e){console.error(e);}}
-function sbH(){return{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};}
-async function sbGet(t,p=''){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+p,{headers:sbH()});if(!r.ok)throw new Error(await r.text());return r.json();}
-async function sbPost(t,d){const r=await fetch(SB_URL+'/rest/v1/'+t,{method:'POST',headers:{...sbH(),'Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
-async function sbDel(t,m){await fetch(SB_URL+'/rest/v1/'+t+'?'+m,{method:'DELETE',headers:sbH()});}
+let sb=null,ADMIN_EMAIL='';
+async function sbInit(){const r=await fetch('/api/config');const d=await r.json();sb=createClient(d.supabaseUrl,d.supabaseKey);ADMIN_EMAIL=d.adminEmail||'';}
+async function sbGet(t,orderSpec){
+  let q=sb.from(t).select('*');
+  (orderSpec||'').replace(/^order=/,'').split(',').filter(Boolean).forEach(part=>{
+    const[col,dir]=part.split('.');
+    q=q.order(col,{ascending:dir!=='desc'});
+  });
+  const{data,error}=await q;
+  if(error)throw new Error(error.message);
+  return data;
+}
+async function sbPost(t,rows,onConflict){
+  const q=onConflict?sb.from(t).upsert(rows,{onConflict}):sb.from(t).insert(rows);
+  const{data,error}=await q.select();
+  if(error)throw new Error(error.message);
+  return data;
+}
+async function sbDel(t,filter){
+  const idx=filter.indexOf('=eq.');
+  const col=filter.slice(0,idx),val=filter.slice(idx+4);
+  const{error}=await sb.from(t).delete().eq(col,val);
+  if(error)throw new Error(error.message);
+}
+
+// ══════ AUTH SCREENS ══════
+function AuthScreen(){
+  const[email,setEmail]=useState('');
+  const[password,setPassword]=useState('');
+  const[err,setErr]=useState('');
+  const[msg,setMsg]=useState('');
+  const[busy,setBusy]=useState(false);
+  async function doSignIn(){
+    setBusy(true);setErr('');
+    const{error}=await sb.auth.signInWithPassword({email:email.trim(),password});
+    if(error)setErr(error.message);
+    setBusy(false);
+  }
+  async function doReset(){
+    setBusy(true);setErr('');setMsg('');
+    const{error}=await sb.auth.resetPasswordForEmail(email.trim(),{redirectTo:window.location.origin});
+    if(error)setErr(error.message);else setMsg('Check your email for a reset link.');
+    setBusy(false);
+  }
+  return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh">
+    <div class="card" style="width:320px">
+      <div class="ct">Sign In</div>
+      ${err&&html`<div class="err">${err}</div>`}
+      ${msg&&html`<div class="ok">${msg}</div>`}
+      <div style="margin-bottom:10px"><input class="inp" type="email" placeholder="Email" value=${email} onInput=${e=>setEmail(e.target.value)}/></div>
+      <div style="margin-bottom:10px"><input class="inp" type="password" placeholder="Password" value=${password} onInput=${e=>setPassword(e.target.value)}/></div>
+      <button class="btn" style="width:100%" disabled=${busy} onClick=${doSignIn}>${busy?'Signing in…':'Sign In'}</button>
+      <div style="text-align:center;margin-top:10px"><a href="#" style="font-size:11px;color:#9BA3AC" onClick=${e=>{e.preventDefault();doReset();}}>Forgot password?</a></div>
+      <div style="text-align:center;margin-top:6px;font-size:10px;color:#9BA3AC">Invite-only. Contact the admin for access.</div>
+    </div>
+  </div>`;
+}
+function SetPasswordScreen({onDone}){
+  const[password,setPassword]=useState('');
+  const[err,setErr]=useState('');
+  const[busy,setBusy]=useState(false);
+  async function save(){
+    if(password.length<8){setErr('Password must be at least 8 characters');return;}
+    setBusy(true);setErr('');
+    const{error}=await sb.auth.updateUser({password});
+    if(error)setErr(error.message);else onDone();
+    setBusy(false);
+  }
+  return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh">
+    <div class="card" style="width:320px">
+      <div class="ct">Set Your Password</div>
+      ${err&&html`<div class="err">${err}</div>`}
+      <div style="margin-bottom:10px"><input class="inp" type="password" placeholder="New password" value=${password} onInput=${e=>setPassword(e.target.value)}/></div>
+      <button class="btn" style="width:100%" disabled=${busy} onClick=${save}>${busy?'Saving…':'Save Password'}</button>
+    </div>
+  </div>`;
+}
+function InviteControl({userEmail}){
+  const[open,setOpen]=useState(false);
+  const[inviteEmail,setInviteEmail]=useState('');
+  const[busy,setBusy]=useState(false);
+  const[msg,setMsg]=useState('');
+  const[err,setErr]=useState('');
+  if(!ADMIN_EMAIL||userEmail!==ADMIN_EMAIL)return null;
+  async function sendInvite(){
+    setBusy(true);setErr('');setMsg('');
+    try{
+      const{data:{session}}=await sb.auth.getSession();
+      const r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({email:inviteEmail.trim()})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Invite failed');
+      setMsg('Invite sent to '+inviteEmail);setInviteEmail('');
+    }catch(e){setErr(e.message);}
+    setBusy(false);
+  }
+  return html`<div style="margin-left:auto;position:relative">
+    <button class="rn" onClick=${()=>setOpen(!open)}>+ Invite</button>
+    ${open&&html`<div class="card" style="position:absolute;right:0;top:32px;width:240px;z-index:10">
+      ${err&&html`<div class="err">${err}</div>`}
+      ${msg&&html`<div class="ok">${msg}</div>`}
+      <input class="inp" placeholder="friend@email.com" value=${inviteEmail} onInput=${e=>setInviteEmail(e.target.value)} style="margin-bottom:8px"/>
+      <button class="btn" style="width:100%" disabled=${busy||!inviteEmail.trim()} onClick=${sendInvite}>${busy?'Sending…':'Send Invite'}</button>
+    </div>`}
+  </div>`;
+}
 
 // ══════ CLASSIFIER (two-axis) ══════
 function cls(nm){
@@ -868,6 +968,9 @@ let _rngTimer=null;
 function App(){
   const[ready,setReady]=useState(false);
   const[tab,setTab]=useState('Home');
+  const[user,setUser]=useState(null);
+  const[authChecked,setAuthChecked]=useState(false);
+  const[needsPw,setNeedsPw]=useState(false);
   const[sess,setSess]=useState([]);
   const[prs,setPrs]=useState([]);
   const[bench,setBench]=useState([]);
@@ -948,17 +1051,37 @@ function App(){
   const[bubbleDrill,setBubbleDrill]=useState(null);
   const[bubbleExpand,setBubbleExpand]=useState(null);
 
+  // Auth bootstrap — runs once
   useEffect(()=>{let c=false;
+    (async()=>{
+      try{await sbInit();}catch(e){console.error('Config load:',e);}
+      const{data:{session}}=await sb.auth.getSession();
+      if(!c)setUser(session?.user||null);
+      sb.auth.onAuthStateChange((event,session)=>{
+        if(c)return;
+        setUser(session?.user||null);
+        if(event==='PASSWORD_RECOVERY')setNeedsPw(true);
+      });
+      if(!c)setAuthChecked(true);
+    })();
+    return()=>{c=true;};
+  },[]);
+
+  // Data load — runs whenever the authenticated user changes
+  useEffect(()=>{
+    if(!user){setReady(true);return;}
+    let c=false;
+    setReady(false);
     const T=ms=>new Promise((_,r)=>setTimeout(r,ms));
     const fallback=setTimeout(()=>{if(!c)setReady(true);},12000);
     (async()=>{
-      try{await Promise.race([sbInit(),T(5000)]);}catch(e){}
       try{const[s,p,b]=await Promise.race([
         Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]),
         T(8000)
       ]);if(!c){setSess(s);setPrs(p);setBench(b);}}catch(e){console.error('Load:',e);}
       clearTimeout(fallback);if(!c)setReady(true);
-    })();return()=>{c=true;clearTimeout(fallback);};},[]);
+    })();return()=>{c=true;clearTimeout(fallback);};
+  },[user]);
 
   // Derived
   const lifts=useMemo(()=>prs.filter(p=>p.category==='lift'),[prs]);
@@ -1087,7 +1210,7 @@ function App(){
       const patch=isImprovement
         ?{pr_value:newVal,pr_display:raw,date:editPrDate,history:hist}
         :{history:hist};
-      await fetch(SB_URL+'/rest/v1/prs?id=eq.'+pr.id,{method:'PATCH',headers:sbH(),body:JSON.stringify(patch)});
+      await sb.from('prs').update(patch).eq('id',pr.id);
       const updated=await sbGet('prs','order=category,name');setPrs(updated);setEditPrId(null);
     }catch(e){console.error(e);}
     setEditPrSaving(false);
@@ -1100,9 +1223,9 @@ function App(){
       const newScore={d:bmDate,v:bmScore.trim(),note:bmNote.trim()};
       if(existing){
         const scores=[...(existing.scores||[]),newScore].sort((a,b)=>a.d.localeCompare(b.d));
-        await fetch(SB_URL+'/rest/v1/benchmarks?id=eq.'+existing.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({scores})});
+        await sb.from('benchmarks').update({scores}).eq('id',existing.id);
       } else {
-        await sbPost('benchmarks',[{name:bmName.trim(),scores:[newScore],notes:''}]);
+        await sbPost('benchmarks',[{name:bmName.trim(),scores:[newScore],notes:''}],'user_id,name');
       }
       const updated=await sbGet('benchmarks','order=name');setBench(updated);
       setBmOpen(false);setBmName('');setBmScore('');setBmNote('');setPendingBenchmark(null);
@@ -1119,7 +1242,7 @@ function App(){
         const p=raw.split(':').map(Number);
         numVal=p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1];
       } else numVal=parseFloat(raw)||0;
-      await sbPost('prs',[{category:addPrCat,name:addPrName.trim(),pr_value:numVal,pr_display:raw,date:addPrDate,history:[{d:addPrDate,v:numVal}]}]);
+      await sbPost('prs',[{category:addPrCat,name:addPrName.trim(),pr_value:numVal,pr_display:raw,date:addPrDate,history:[{d:addPrDate,v:numVal}]}],'user_id,category,name');
       const updated=await sbGet('prs','order=category,name');setPrs(updated);
       setAddPrCat(null);setAddPrName('');setAddPrVal('');
     }catch(e){console.error(e);}
@@ -1194,7 +1317,7 @@ function App(){
       const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inText,date:inDate})});
       if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
       const parsed=await r.json();
-      await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}]);
+      await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}],'user_id,date');
       const updated=await sbGet('sessions','order=date.desc');
       setSess(updated);setPOk('Saved '+fd(inDate));
       const unclassified=findUnclassified(parsed.blocks||[]);
@@ -1206,6 +1329,9 @@ function App(){
     }catch(e){setPErr(e.message);}finally{setParsing(false);}
   }
 
+  if(!authChecked)return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#9BA3AC"><div class="spin"></div></div>`;
+  if(!user)return html`<${AuthScreen}/>`;
+  if(needsPw)return html`<${SetPasswordScreen} onDone=${()=>setNeedsPw(false)}/>`;
   if(!ready)return html`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#9BA3AC"><div class="spin"></div></div>`;
 
   // ══════ DASHBOARD CARD HELPERS (defined at App level — stable references) ══════
@@ -1231,6 +1357,13 @@ function App(){
 
   // ══════ HOME TAB ══════
   function HomeTab(){
+    if(!sess.length&&!prs.length&&!bench.length){
+      return html`<div class="card" style="text-align:center;padding:40px 20px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px">Welcome to your CrossFit Dashboard</div>
+        <div style="color:#9BA3AC;font-size:13px;margin-bottom:16px">Log your first workout to start tracking sessions, PRs, and benchmarks.</div>
+        <button class="btn" onClick=${()=>setTab('Sessions')}>Log a Workout</button>
+      </div>`;
+    }
     const sc=streak<5?'streak-g':streak<7?'streak-y':'streak-r';
     const hm=happyAgg.mood;const fm=funAgg.mood;
     const happyRate=hm.hTotal?Math.round((hm.happy+hm.neutralH)/hm.hTotal*100):null;
@@ -1325,7 +1458,7 @@ function App(){
               const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:editRawText,date:s.date})});
               if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
               const parsed=await r.json();
-              await fetch(SB_URL+'/rest/v1/sessions?id=eq.'+s.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({blocks:parsed.blocks||[],raw_text:editRawText,notes:parsed.notes||''})});
+              await sb.from('sessions').update({blocks:parsed.blocks||[],raw_text:editRawText,notes:parsed.notes||''}).eq('id',s.id);
               const updated=await sbGet('sessions','order=date.desc');setSess(updated);closeEdit();
             }catch(e){setEditErr(e.message);}finally{setEditSaving(false);}
           }
@@ -1358,7 +1491,7 @@ function App(){
                     ${[['happy','Happy'],['neutral','Neutral'],['unhappy','Not Happy']].map(([v,l])=>{
                       const cur=sess.find(x=>x.date===s.date)?.happiness||'';
                       return html`<button class="rn ${cur===v?'act':''}" onClick=${async()=>{
-                        await fetch(SB_URL+'/rest/v1/sessions?id=eq.'+s.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({happiness:cur===v?'':v})});
+                        await sb.from('sessions').update({happiness:cur===v?'':v}).eq('id',s.id);
                         const updated=await sbGet('sessions','order=date.desc');setSess(updated);
                       }}>${l}</button>`;
                     })}
@@ -1370,7 +1503,7 @@ function App(){
                     ${[['fun','Had Fun'],['neutral','Neutral'],['notfun','Not Fun']].map(([v,l])=>{
                       const cur=sess.find(x=>x.date===s.date)?.fun||'';
                       return html`<button class="rn ${cur===v?'act':''}" onClick=${async()=>{
-                        await fetch(SB_URL+'/rest/v1/sessions?id=eq.'+s.id,{method:'PATCH',headers:sbH(),body:JSON.stringify({fun:cur===v?'':v})});
+                        await sb.from('sessions').update({fun:cur===v?'':v}).eq('id',s.id);
                         const updated=await sbGet('sessions','order=date.desc');setSess(updated);
                       }}>${l}</button>`;
                     })}
@@ -1890,7 +2023,7 @@ function App(){
             allBlocks.push(...blocks);
             rawParts.push(workoutPart);
           }
-          await sbPost('sessions',[{date,blocks:allBlocks,raw_text:rawParts.join('\n\n---\n\n'),notes:'',happiness:'',fun:''}]);
+          await sbPost('sessions',[{date,blocks:allBlocks,raw_text:rawParts.join('\n\n---\n\n'),notes:'',happiness:'',fun:''}],'user_id,date');
         }catch(e){setImpErrs(prev=>[...prev,date+': '+e.message]);}
         setImpDone(d=>d+1);
       }
@@ -1952,7 +2085,7 @@ function App(){
   const tabs=['Home','Sessions','PRs & Benchmarks','Create Session'];
 
   return html`<div>
-    <div class="hdr"><svg viewBox="16 -4 336 262" height="38" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="cg" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#FFA184"/><stop offset="52%" stop-color="#FF765F"/><stop offset="100%" stop-color="#FF5E4D"/></linearGradient></defs><g transform="translate(8 4) scale(0.94)" fill="url(#cg)"><path d="M 14 256 C 15 244, 27 234, 41 232 L 60 232 C 70 232, 77 240, 77 249 C 77 257, 71 262, 61 262 L 26 262 C 18 262, 13 260, 14 256 Z"/><path d="M 91 246 L 106 185 C 110 166, 126 153, 145 153 C 166 153, 180 171, 176 191 L 162 246 C 159 257, 149 264, 137 264 L 111 264 C 97 264, 88 257, 91 246 Z"/><path d="M 173 231 L 193 142 C 197 122, 214 108, 234 108 C 255 108, 270 127, 266 147 L 247 231 C 244 248, 230 260, 213 260 L 192 260 C 178 260, 170 249, 173 231 Z"/><path d="M 257 207 L 283 89 C 287 69, 304 55, 324 55 C 345 55, 360 74, 356 94 L 331 207 C 327 226, 311 240, 292 240 L 275 240 C 262 240, 254 226, 257 207 Z"/><path d="M 344 19 A 24 24 0 1 1 296 19 A 24 24 0 1 1 344 19 Z"/></g></svg><div><h1>CrossFit</h1><div class="sub">Dashboard</div></div></div>
+    <div class="hdr"><svg viewBox="16 -4 336 262" height="38" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="cg" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#FFA184"/><stop offset="52%" stop-color="#FF765F"/><stop offset="100%" stop-color="#FF5E4D"/></linearGradient></defs><g transform="translate(8 4) scale(0.94)" fill="url(#cg)"><path d="M 14 256 C 15 244, 27 234, 41 232 L 60 232 C 70 232, 77 240, 77 249 C 77 257, 71 262, 61 262 L 26 262 C 18 262, 13 260, 14 256 Z"/><path d="M 91 246 L 106 185 C 110 166, 126 153, 145 153 C 166 153, 180 171, 176 191 L 162 246 C 159 257, 149 264, 137 264 L 111 264 C 97 264, 88 257, 91 246 Z"/><path d="M 173 231 L 193 142 C 197 122, 214 108, 234 108 C 255 108, 270 127, 266 147 L 247 231 C 244 248, 230 260, 213 260 L 192 260 C 178 260, 170 249, 173 231 Z"/><path d="M 257 207 L 283 89 C 287 69, 304 55, 324 55 C 345 55, 360 74, 356 94 L 331 207 C 327 226, 311 240, 292 240 L 275 240 C 262 240, 254 226, 257 207 Z"/><path d="M 344 19 A 24 24 0 1 1 296 19 A 24 24 0 1 1 344 19 Z"/></g></svg><div><h1>CrossFit</h1><div class="sub">Dashboard</div></div><${InviteControl} userEmail=${user.email}/><button class="rn" onClick=${()=>setNeedsPw(true)}>Set Password</button><button class="rn" onClick=${()=>sb.auth.signOut()}>Sign Out</button></div>
     <div class="nav">${tabs.map(t=>html`<button class=${tab===t?'act':''} onClick=${()=>setTab(t)}>${t}</button>`)}</div>
     <div class="bod">
       ${tab==='Home'&&HomeTab()}
