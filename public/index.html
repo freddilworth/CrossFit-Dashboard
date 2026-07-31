@@ -415,12 +415,15 @@ function countNameMatches(raw,test){
 const MOVEMENT_CATEGORIES={
   squats:{label:'Squats',color:'#FFC145',fmt:'int',
     desc:'Any squat — Air Squat, Back Squat, Front Squat, Thruster, Wall Ball, OHS, Squat Clean, and more.',
+    hint:'Incl. Air Squat, Wall Ball, Thruster +4',
     match:(raw,cs)=>cs.filter(c=>c.pat==='squat'&&c.sub==='traditional').length},
   burpees:{label:'Burpees',color:'#FF5D73',fmt:'int',
     desc:'Every burpee variation — standard, over the bar, to target, box jump, burpee pull-ups, and any other variation.',
+    hint:'Incl. Burpee, Over the Bar +3',
     match:(raw)=>countNameMatches(raw,p=>/burpee/i.test(p))},
   pullups:{label:'Pull-Ups',color:'#4FA8D8',fmt:'int',
     desc:'Pull-Up, Chest to Bar, Bar Muscle-Up, Ring Muscle-Up, burpee pull-ups, and any other pull-up variation.',
+    hint:'Incl. C2B, Muscle-Up +2',
     match:(raw,cs)=>{
       if(/rope/i.test(raw))return 0;
       const patCount=cs.filter(c=>c.pat==='pull'&&c.sub==='vertical'&&c.mod==='gymnastics').length;
@@ -437,24 +440,31 @@ const MOVEMENT_CATEGORIES={
     match:(raw)=>{const c=normMov(raw);return(c==='Row'||c==='Ski Erg'||c==='Bike')&&!/\bcal(orie)?s?\b/i.test(raw)?1:0;}},
   cleans:{label:'Cleans',color:'#FF9F5A',fmt:'int',
     desc:'Any clean — Power Clean, Squat Clean, Clean & Jerk, and barbell/DB/KB variations.',
+    hint:'Incl. Power Clean, Squat Clean +2',
     match:(raw)=>countNameMatches(raw,p=>/\bclean/i.test(p)||/c\s*&\s*j\b/i.test(p))},
   snatches:{label:'Snatches',color:'#5AC8C8',fmt:'int',
     desc:'Any snatch — Power Snatch, Squat Snatch, and barbell/DB/KB variations.',
+    hint:'Incl. Power Snatch, Squat Snatch +2',
     match:(raw)=>countNameMatches(raw,p=>/snatch/i.test(p)||/\bhps\b/i.test(p))},
   box_jumps:{label:'Box Jumps',color:'#E8871E',fmt:'int',
     desc:'Box Jump, Box Jump Over, and burpee box jump overs.',
+    hint:'Incl. Box Jump, Box Jump Over +1',
     match:(raw)=>countNameMatches(raw,p=>/box\s*jump/i.test(p)||/\bb?bjo\b/i.test(p))},
   lunges:{label:'Lunges',color:'#D4779E',fmt:'int',
-    desc:'Any lunge — Reverse Lunge, Walking Lunge, Goblet Lunge, and other lunge variations.',
+    desc:'Any lunge — Reverse Lunge, Walking Lunge, Goblet Lunge, and other barbell/DB/KB lunge variations.',
+    hint:'Incl. Reverse Lunge, Walking Lunge +1',
     match:(raw)=>countNameMatches(raw,p=>/lunge/i.test(p))},
   shoulder_to_oh:{label:'Shoulder to OH',color:'#7C93C4',fmt:'int',
-    desc:'Strict Press, Push Press, Jerk, and the overhead-press portion of Thrusters, Clusters, and other complexes.',
+    desc:'Strict Press, Push Press, Jerk, and the overhead-press portion of Thrusters, Clusters, and other complexes — barbell, DB, and KB variations included.',
+    hint:'Incl. Strict Press, Push Press +3',
     match:(raw,cs)=>cs.filter(c=>c.pat==='push'&&c.sub==='vertical'&&c.mod==='weightlifting').length},
   hspu:{label:'HSPU',color:'#B48EAD',fmt:'int',
-    desc:'HSPU and Strict HSPU combined.',
+    desc:'HSPU and Strict HSPU combined, including Deficit and Parallette HSPU.',
+    hint:'Incl. Strict HSPU, HSPU +2',
     match:(raw)=>countNameMatches(raw,p=>/hspu|handstand\s*push/i.test(p))},
   deadlifts:{label:'Deadlifts',color:'#6FA86F',fmt:'int',
-    desc:'Deadlift, RDL, Good Morning, and DB/KB deadlift variations.',
+    desc:'Deadlift, RDL, Good Morning, and barbell/DB/KB deadlift variations.',
+    hint:'Incl. RDL, Good Morning +1',
     match:(raw)=>countNameMatches(raw,p=>/deadlift|\brdl\b|\bdl\b|romanian|good\s*morn/i.test(p)&&!/snatch/i.test(p))},
 };
 const MOVEMENT_CATEGORY_KEYS=Object.keys(MOVEMENT_CATEGORIES);
@@ -1538,7 +1548,11 @@ function App(){
                   <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:14px;color:#6B6B65;background:rgba(255,255,255,0.55)" title="Change metric" onClick=${e=>{e.stopPropagation();setMtEditSlot(i);}}>✎</span>
                 </div>
                 <div style="font-size:24px;font-weight:700;color:#2B2825;margin-top:6px">${fmtMovementTotal(val,cat.fmt)}</div>
-                <div style="font-size:11px;color:#6B6B65;text-transform:uppercase;letter-spacing:1px;margin-top:2px">${cat.label}</div>
+                <div style="font-size:11px;margin-top:2px">
+                  <span style="color:#6B6B65;text-transform:uppercase;letter-spacing:1px;font-weight:600">${cat.label}</span>
+                  ${cat.hint&&html`<span style="color:#8A8A6E;text-transform:uppercase;letter-spacing:1px;font-weight:400"> Group</span>`}
+                </div>
+                ${cat.hint&&html`<div style="font-size:10px;color:#9A9A85;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.hint}</div>`}
                 ${mtHistory&&(()=>{
                   const periodLbl=PERIOD_LABEL_ABBREV[mtRng];
                   const prevVal=mtHistory[0].movementTotals[key]||0;
