@@ -506,16 +506,48 @@ function scoreTd(score){
 }
 function blockTd(b){return inferTd(b.fmt)||scoreTd(b.score)||b.td||null;}
 
+// Calendar-boundary periods (true Mon–Sun weeks, calendar months/quarters/years) — the single
+// definition of "week/month/quarter/year" used everywhere in the app, so a period means the same
+// thing in the top stat tiles, Movement Group Totals, and Period Trends alike.
+function localISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function calCalWeek(offset){
+  const now=new Date();const day=now.getDay();
+  const toMon=day===0?-6:1-day;
+  const mon=new Date(now);mon.setDate(now.getDate()+toMon-offset*7);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  return{start:localISO(mon),end:localISO(sun)};
+}
+function calCalMonth(offset){
+  const now=new Date();let m=now.getMonth()-offset,y=now.getFullYear();
+  while(m<0){m+=12;y-=1;}
+  const start=y+'-'+String(m+1).padStart(2,'0')+'-01';
+  const lastDay=new Date(y,m+1,0).getDate();
+  const end=offset===0?localISO(now):y+'-'+String(m+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+  return{start,end};
+}
+function calCalQuarter(offset){
+  const now=new Date();let q=Math.floor(now.getMonth()/3)-offset,y=now.getFullYear();
+  while(q<0){q+=4;y-=1;}
+  const startMonth=q*3;
+  const start=y+'-'+String(startMonth+1).padStart(2,'0')+'-01';
+  const lastDay=new Date(y,startMonth+3,0);
+  const end=offset===0?localISO(now):localISO(lastDay);
+  return{start,end};
+}
+function calCalYear(offset){
+  const now=new Date();const y=now.getFullYear()-offset;
+  const start=y+'-01-01';
+  const end=offset===0?localISO(now):y+'-12-31';
+  return{start,end};
+}
 function calPeriod(type,offset=0){
-  const now=new Date();const today=now.toISOString().slice(0,10);let s;
-  const days={week:7,month:30,quarter:90,year:365};
+  const today=localISO(new Date());
   if(type==='all')return{start:'2000-01-01',end:today};
-  const d=days[type]||30;
-  const totalDays=d*(offset+1);
-  const prevDays=d*offset;
-  const sDate=new Date(now);sDate.setDate(sDate.getDate()-totalDays+1);
-  const eDate=new Date(now);eDate.setDate(eDate.getDate()-prevDays);
-  return{start:sDate.toISOString().slice(0,10),end:eDate.toISOString().slice(0,10)};
+  if(type==='week')return calCalWeek(offset);
+  if(type==='month')return calCalMonth(offset);
+  if(type==='quarter')return calCalQuarter(offset);
+  if(type==='year')return calCalYear(offset);
+  return{start:'2000-01-01',end:today};
 }
 
 // ══════ SVG CHARTS ══════
@@ -974,42 +1006,9 @@ function App(){
 
   // Trend table periods
   const TREND_COUNTS={week:8,month:6,quarter:4,year:3};
-  function localISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-  function calCalWeek(offset){
-    const now=new Date();const day=now.getDay();
-    const toMon=day===0?-6:1-day;
-    const mon=new Date(now);mon.setDate(now.getDate()+toMon-offset*7);
-    const sun=new Date(mon);sun.setDate(mon.getDate()+6);
-    return{start:localISO(mon),end:localISO(sun)};
-  }
-  function calCalMonth(offset){
-    const now=new Date();let m=now.getMonth()-offset,y=now.getFullYear();
-    while(m<0){m+=12;y-=1;}
-    const start=y+'-'+String(m+1).padStart(2,'0')+'-01';
-    const lastDay=new Date(y,m+1,0).getDate();
-    const end=offset===0?localISO(now):y+'-'+String(m+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
-    return{start,end};
-  }
-  function calCalQuarter(offset){
-    const now=new Date();let q=Math.floor(now.getMonth()/3)-offset,y=now.getFullYear();
-    while(q<0){q+=4;y-=1;}
-    const startMonth=q*3;
-    const start=y+'-'+String(startMonth+1).padStart(2,'0')+'-01';
-    const lastDay=new Date(y,startMonth+3,0);
-    const end=offset===0?localISO(now):localISO(lastDay);
-    return{start,end};
-  }
-  function calCalYear(offset){
-    const now=new Date();const y=now.getFullYear()-offset;
-    const start=y+'-01-01';
-    const end=offset===0?localISO(now):y+'-12-31';
-    return{start,end};
-  }
+  // calPeriod already uses true calendar boundaries for week/month/quarter/year (see top-level
+  // definition) — trendPeriod is just an alias kept for readability at the call sites below.
   function trendPeriod(type,offset){
-    if(type==='week')return calCalWeek(offset);
-    if(type==='month')return calCalMonth(offset);
-    if(type==='quarter')return calCalQuarter(offset);
-    if(type==='year')return calCalYear(offset);
     return calPeriod(type,offset);
   }
   function trendLabel(type,offset){
@@ -1397,14 +1396,17 @@ function App(){
     const modFD=MK.map(k=>({key:k,label:MODS[k].l,val:volAgg.mF[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const modTD=MK.map(k=>({key:k,label:MODS[k].l,val:volAgg.mT[k]||0,color:MODS[k].c})).filter(x=>x.val>0);
     const tdD=[{key:'short',label:'Short (<10m)',val:volAgg.td.short,color:'#FF5D73'},{key:'med',label:'Medium (10-20m)',val:volAgg.td.med,color:'#4FA8D8'},{key:'long',label:'Long (20m+)',val:volAgg.td.long,color:'#2B2825'}];
-    const totalTon=Object.values(volAgg.pT).reduce((a,b)=>a+(isNaN(b)?0:b),0);
-    const sumTon=a=>Object.values(a.pT).reduce((s,b)=>s+(isNaN(b)?0:b),0);
+    // primaryTon, not a sum across pT's pattern buckets — a compound lift like Thruster gets full
+    // tonnage credit in BOTH the squat and push pattern buckets by design (each is a real rep of
+    // that pattern), so summing pT would count that lift's weight twice. primaryTon counts each
+    // movement's tonnage exactly once, which is what "how much weight did I move" actually means.
+    const totalTon=volAgg.primaryTon||0;
     const fmtTon=v=>v>0?(v/1000).toFixed(1)+'k':'0';
     const volPeriodLbl=PERIOD_LABEL_ABBREV[rngDeferred];
     const avgCnt=volHistory?Math.round(volHistory.reduce((s,a)=>s+a.cnt,0)/volHistory.length):null;
     const lastCnt=volHistory?volHistory[0].cnt:null;
-    const avgTon=volHistory?volHistory.reduce((s,a)=>s+sumTon(a),0)/volHistory.length:null;
-    const lastTon=volHistory?sumTon(volHistory[0]):null;
+    const avgTon=volHistory?volHistory.reduce((s,a)=>s+(a.primaryTon||0),0)/volHistory.length:null;
+    const lastTon=volHistory?(volHistory[0].primaryTon||0):null;
 
     return html`<div>
       <div style="display:flex;gap:3px;margin-bottom:14px">
