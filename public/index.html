@@ -592,6 +592,12 @@ function scanPrHistory(sessions,currentPrs){
 // phrasing wasn't listed (e.g. "Banded Pull-ups" slipping past a Set entry for "Banded Pull-up"
 // only), the same class of bug that hit the weightlifting exclusion list's "Farmer's Carry" entry.
 const GYM_PR_EXCLUDE=/^air\s*squats?$|^v-?ups?$|^ring\s*dips?$|^sit-?ups?$|^side\s*planks?$|^leg\s*raises?$|^hollow\s*body\s*rocks?$|^planks?$|^box\s*step\s*ups?$|^alternating\s*pistols?$|banded.*pull.?up|weighted.*pull.?up|^ghd\s*back\s*extensions?$|^bar\s*dips?$|^hand\s*release\s*push-?ups?$|^ring\s*rows?$|weighted.*dips?$/i;
+// Total-reps-in-a-workout is a fundamentally different measurement than a manually-tracked max
+// unbroken set for the same movement (e.g. "180 Toes to Bar across a whole metcon" vs "33 unbroken
+// Toes to Bar") — the two must never share a prs row, or a big-volume session day silently
+// overwrites (and looks like it "beat") a real unbroken-set PR. Every auto-detected gymnastics
+// candidate gets this suffix so its name can never collide with a plain, manually-entered PR name.
+function gymCandidateName(movement){return movement+' (Most in a Workout)';}
 function rawGymnasticsReps(session){
   const totals={};
   function credit(rawName,reps){
@@ -619,7 +625,7 @@ function rawGymnasticsReps(session){
       (b.pm||[]).forEach(pm=>credit(pm.n,parseFloat(pm.r)||0));
     }
   });
-  return Object.entries(totals).filter(([,reps])=>reps>0).map(([name,reps])=>({name,reps}));
+  return Object.entries(totals).filter(([,reps])=>reps>0).map(([movement,reps])=>({movement,reps,name:gymCandidateName(movement)}));
 }
 // Day-to-day: only surfaces a genuine improvement over an ALREADY-tracked gymnastics PR — same
 // "nothing to compare against yet" reasoning as extractPrCandidates above.
@@ -1463,7 +1469,7 @@ function App(){
       const value=parseFloat(prEditVals[key])||pcValue(c);
       const existing=prs.find(p=>p.category===category&&p.name===c.name);
       const history=[...(existing?.history||[]),{d:c.session_date,v:value}];
-      const pr_display=category==='gymnastics'?value+' reps':String(value);
+      const pr_display=String(value);
       await sbPost('prs',[{category,name:c.name,pr_value:value,pr_display,date:c.session_date,history}],'user_id,category,name');
       const updatedPrs=await sbGet('prs','order=category,name');setPrs(updatedPrs);
       if(c.id){await sb.from('pr_candidates').delete().eq('id',c.id);setPrQueue(q=>q.filter(x=>x.id!==c.id));}

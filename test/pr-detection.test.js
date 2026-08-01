@@ -215,7 +215,10 @@ check('rawGymnasticsReps sums metcon reps for a gymnastics movement', () => {
   const sess = metconSession([['Pull-ups', 30]]);
   const raw = rawGymnasticsReps(sess);
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Pull-Up');
+  // Suffixed — a total-reps-in-a-workout PR must never share a name with a manually-tracked,
+  // max-unbroken-set PR for the same movement (see gymCandidateName).
+  assert.strictEqual(raw[0].name, 'Pull-Up (Most in a Workout)');
+  assert.strictEqual(raw[0].movement, 'Pull-Up');
   assert.strictEqual(raw[0].reps, 30);
 });
 check('rawGymnasticsReps sums across strength/accessory sets AND metcon reps in the same session, unified by normalized name', () => {
@@ -228,7 +231,7 @@ check('rawGymnasticsReps sums across strength/accessory sets AND metcon reps in 
   };
   const raw = rawGymnasticsReps(sess);
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Pull-Up');
+  assert.strictEqual(raw[0].name, 'Pull-Up (Most in a Workout)');
   assert.strictEqual(raw[0].reps, 30);
 });
 check('rawGymnasticsReps excludes non-gymnastics movements (e.g. a barbell lift in the same session)', () => {
@@ -241,7 +244,7 @@ check('rawGymnasticsReps excludes non-gymnastics movements (e.g. a barbell lift 
   };
   const raw = rawGymnasticsReps(sess);
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Toes to Bar');
+  assert.strictEqual(raw[0].name, 'Toes to Bar (Most in a Workout)');
 });
 check('rawGymnasticsReps excludes multi-movement complexes', () => {
   const sess = { id: 's1', date: '2026-01-15', blocks: [{ k: 'accessory', mov: 'Pull-up + Push-up', sets: [{ r: 10, w: 0 }] }] };
@@ -251,12 +254,19 @@ check('rawGymnasticsReps excludes multi-movement complexes', () => {
 check('extractGymnasticsPrCandidates requires an existing baseline, same as weightlifting', () => {
   const sess = metconSession([['Pull-ups', 30]]);
   assert.strictEqual(extractGymnasticsPrCandidates(sess, []).length, 0);
-  const cands = extractGymnasticsPrCandidates(sess, [{ category: 'gymnastics', name: 'Pull-Up', pr_value: 25 }]);
+  const cands = extractGymnasticsPrCandidates(sess, [{ category: 'gymnastics', name: 'Pull-Up (Most in a Workout)', pr_value: 25 }]);
   assert.strictEqual(cands.length, 1);
   assert.strictEqual(cands[0].reps, 30);
 });
 check('extractGymnasticsPrCandidates does not flag a session that does not beat the baseline', () => {
   const sess = metconSession([['Pull-ups', 20]]);
+  const cands = extractGymnasticsPrCandidates(sess, [{ category: 'gymnastics', name: 'Pull-Up (Most in a Workout)', pr_value: 25 }]);
+  assert.strictEqual(cands.length, 0);
+});
+check('extractGymnasticsPrCandidates never matches against a manually-tracked PR of the plain (unsuffixed) name', () => {
+  // A manual "max unbroken" PR named plain "Pull-Up" must NOT be treated as a baseline for the
+  // total-reps-in-a-workout metric — the two measurements are not comparable.
+  const sess = metconSession([['Pull-ups', 30]]);
   const cands = extractGymnasticsPrCandidates(sess, [{ category: 'gymnastics', name: 'Pull-Up', pr_value: 25 }]);
   assert.strictEqual(cands.length, 0);
 });
@@ -276,12 +286,12 @@ check('scanGymnasticsPrHistory surfaces the all-time best even with no existing 
   const sessions = [metconSession([['Toes to Bar', 60]])];
   const found = scanGymnasticsPrHistory(sessions, []);
   assert.strictEqual(found.length, 1);
-  assert.strictEqual(found[0].name, 'Toes to Bar');
+  assert.strictEqual(found[0].name, 'Toes to Bar (Most in a Workout)');
   assert.strictEqual(found[0].reps, 60);
 });
 check('scanGymnasticsPrHistory does not surface anything when the all-time best does not beat the seed PR', () => {
   const sessions = [metconSession([['Pull-ups', 20]])];
-  const found = scanGymnasticsPrHistory(sessions, [{ category: 'gymnastics', name: 'Pull-Up', pr_value: 25 }]);
+  const found = scanGymnasticsPrHistory(sessions, [{ category: 'gymnastics', name: 'Pull-Up (Most in a Workout)', pr_value: 25 }]);
   assert.strictEqual(found.length, 0);
 });
 
@@ -291,14 +301,14 @@ check('rawGymnasticsReps unifies every burpee variation into one "Burpees" total
   const sess = metconSession([['Burpees', 50], ['Burpee Over Bar', 30], ['Burpee Pull-up', 20]]);
   const raw = rawGymnasticsReps(sess);
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Burpees');
+  assert.strictEqual(raw[0].name, 'Burpees (Most in a Workout)');
   assert.strictEqual(raw[0].reps, 100);
 });
 check('Burpee Box Step Over joins Burpees too, even though its name-normalizer strips "burpee" entirely', () => {
   const sess = metconSession([['Burpees', 50], ['Burpee Box Step Over', 20]]);
   const raw = rawGymnasticsReps(sess);
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Burpees');
+  assert.strictEqual(raw[0].name, 'Burpees (Most in a Workout)');
   assert.strictEqual(raw[0].reps, 70);
 });
 
@@ -320,12 +330,12 @@ check('specific uncommon-to-PR gymnastics movements are excluded, singular and p
 check('excluding banded/weighted pull-up variants does not exclude a plain Pull-Up', () => {
   const raw = rawGymnasticsReps(metconSession([['Pull-ups', 20]]));
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Pull-Up');
+  assert.strictEqual(raw[0].movement, 'Pull-Up');
 });
 check('excluding Weighted Dip does not exclude a plain Dip', () => {
   const raw = rawGymnasticsReps(metconSession([['Dip', 20]]));
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Dip');
+  assert.strictEqual(raw[0].movement, 'Dip');
 });
 
 // ── Rope Climb / Rope Climbs must normalize to the same movement, not track separately ──
@@ -333,8 +343,20 @@ check('Rope Climb and Rope Climbs are the same movement', () => {
   const sess = metconSession([['Rope Climb', 10], ['Rope Climbs', 5]]);
   const raw = rawGymnasticsReps(sess);
   assert.strictEqual(raw.length, 1);
-  assert.strictEqual(raw[0].name, 'Rope Climb');
+  assert.strictEqual(raw[0].movement, 'Rope Climb');
   assert.strictEqual(raw[0].reps, 15);
+});
+
+// ── Regression: a manually-tracked max-unbroken-set PR must never be silently overwritten by a
+// total-reps-in-a-workout auto-detection for the same movement (this actually happened in
+// production — a hand-tracked "33 unbroken Toes to Bar" got overwritten by a "180 reps across one
+// metcon" auto-confirm, because both used the same bare "Toes to Bar" prs.name) ──
+check('a big-volume workout day cannot masquerade as an improvement to a manually-tracked unbroken PR', () => {
+  const sess = metconSession([['Toes to Bar', 180]]);
+  // The manual PR is stored under the plain name — extractGymnasticsPrCandidates must not see it
+  // as a baseline at all, since rawGymnasticsReps only ever proposes the suffixed name.
+  const manualOnly = [{ category: 'gymnastics', name: 'Toes to Bar', pr_value: 33, pr_display: '33', date: '2025-11-11' }];
+  assert.strictEqual(extractGymnasticsPrCandidates(sess, manualOnly).length, 0);
 });
 
 console.log(`\n${pass}/${pass + fail} passed`);
