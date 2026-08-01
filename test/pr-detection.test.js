@@ -135,6 +135,19 @@ check('single-leg variants are excluded even when the block has no sub field at 
   // by re-deriving from the movement name via the classifier.
   assert.strictEqual(isPrEligibleBlock({ k: 'accessory', mov: 'Reverse Lunge', sets: [{ r: 10, w: 165 }] }), false);
 });
+check('specific uncommon-to-PR lifts are excluded by exact name', () => {
+  ['Goblet Squat', 'Wall Ball', 'Box Squat', 'Pause Squat', 'Zercher Squat', 'RDL', 'Romanian Deadlift',
+   'Good Morning', 'SDHP', 'Sumo Deadlift High Pull', 'Snatch Grip Deadlift', 'Muscle Snatch',
+   'Snatch Pull', 'Clean Pull', 'Push Jerk Behind Neck', 'Overhead Press', 'Bent Over Row', 'Pendlay Row']
+    .forEach(mov => assert.strictEqual(isPrEligibleBlock({ k: 'strength', mov, sets: [{ r: 5, w: 200 }] }), false, mov));
+});
+check('the exact-name exclusion list does not accidentally exclude related lifts that should stay eligible', () => {
+  // "Overhead Press" is excluded, but "Strict Press"/"Push Press" (distinct canonical names) must
+  // not be swept up with it. "RDL" is excluded, but plain "Deadlift" must not be.
+  assert.strictEqual(isPrEligibleBlock({ k: 'strength', mov: 'Strict Press', sets: [{ r: 5, w: 145 }] }), true);
+  assert.strictEqual(isPrEligibleBlock({ k: 'strength', mov: 'Push Press', sets: [{ r: 5, w: 165 }] }), true);
+  assert.strictEqual(isPrEligibleBlock({ k: 'strength', mov: 'Deadlift', sets: [{ r: 5, w: 315 }] }), true);
+});
 check('a plain barbell lift remains eligible with no pat/sub/mod stored on the block', () => {
   assert.strictEqual(isPrEligibleBlock({ k: 'strength', mov: 'Back Squat', sets: [{ r: 5, w: 225 }] }), true);
 });

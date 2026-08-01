@@ -479,6 +479,13 @@ const PR_PATTERNS=new Set(['squat','hinge','push','pull']);
 // Tested against the NORMALIZED name (normMov), not the raw text, so abbreviations funnel through
 // the same canonical form ("SB Clean" -> "Sandbag Clean") and can't slip past this by spelling.
 const PR_EXCLUDE_NAME=/\+|complex|\bdb\b|dumbbell|\bkb\b|kettlebell|sandbag|sand\s*bag|bicep|tricep|lateral\s*raise|side\s*raise/i;
+// Specific lifts excluded by name even though they'd otherwise qualify (real barbell movements,
+// right pattern/modality) — uncommon enough to PR-test in practice that auto-flagging them is more
+// noise than signal. Matched against the exact normalized (canonical) name, not a regex, since
+// several of these are substrings of names that SHOULD stay eligible (e.g. "Overhead Press" here
+// must not accidentally exclude "Strict Press"/"Push Press", "RDL" must not exclude "Deadlift").
+// Still trackable via the manual +Add PR flow.
+const PR_EXCLUDE_NAMES=new Set(['Goblet Squat','Wall Ball','Box Squat','Pause Squat','Zercher Squat','RDL','Romanian Deadlift','Good Morning','SDHP','Sumo Deadlift High Pull','Snatch Grip Deadlift','Muscle Snatch','Snatch Pull','Clean Pull','Push Jerk Behind Neck','Overhead Press','Bent Over Row','Pendlay Row']);
 function prCandidateName(movement,reps){return(reps===1?'':reps+'RM ')+movement;}
 // Classifies from the movement NAME itself via the app's own authoritative classifier
 // (clsAllCached/normMov), rather than trusting whatever pat/sub/mod the parsing LLM stored on the
@@ -488,7 +495,7 @@ function prCandidateName(movement,reps){return(reps===1?'':reps+'RM ')+movement;
 function isPrEligibleBlock(b){
   if((b.k!=='strength'&&b.k!=='accessory')||!b.mov||!Array.isArray(b.sets))return false;
   const movement=normMov(b.mov)||b.mov;
-  if(PR_EXCLUDE_NAME.test(movement))return false;
+  if(PR_EXCLUDE_NAME.test(movement)||PR_EXCLUDE_NAMES.has(movement))return false;
   const c=clsAllCached(b.mov)[0];
   return!!c&&c.mod==='weightlifting'&&PR_PATTERNS.has(c.pat)&&c.sub!=='single_leg';
 }
