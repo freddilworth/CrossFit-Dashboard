@@ -508,25 +508,28 @@ function extractPrCandidates(session,currentPrs){
     return existing&&c.weight>existing.pr_value;
   });
 }
-// Backfill: walks every session chronologically, tracking a running-best per movement+rep-scheme
-// seeded from confirmed PRs. The first time a rep-scheme is seen with no seed at all, it's recorded
-// as the new baseline silently — not flagged, for the same "nothing to compare against yet" reason
-// as above. Only a LATER sighting that beats what came before (seeded or previously seen) surfaces
-// as a candidate, so history search finds true progression instead of every historical set that
-// happens to be a movement+rep-scheme's first appearance.
+// Backfill: finds, per movement+rep-scheme, the single heaviest set anywhere in history (with the
+// date it happened) and surfaces it only if it beats the seeded confirmed-PR baseline (or if there
+// is no baseline at all — the lift has simply never been tracked at that rep-scheme before). This
+// deliberately collapses the whole chronological climb to ONE candidate per movement+rep-scheme —
+// flagging every intermediate step-up (e.g. a routine +2.5lb increase from a linear-progression
+// program) would bury the one number that actually matters under a staircase of superseded ones,
+// and would also mean confirming an early low candidate then re-reviewing a higher one for the same
+// lift days later, which is exactly the noise the review queue should avoid.
 function scanPrHistory(sessions,currentPrs){
-  const running={};
-  (currentPrs||[]).forEach(p=>{if(p.category==='lift')running[p.name]=p.pr_value;});
+  const baseline={};
+  (currentPrs||[]).forEach(p=>{if(p.category==='lift')baseline[p.name]=p.pr_value;});
   const sorted=[...(sessions||[])].sort((a,b)=>a.date.localeCompare(b.date));
-  const found=[];
+  const best={};
   sorted.forEach(sess=>{
     rawPrSets(sess).forEach(c=>{
-      const prior=running[c.name];
-      if(prior!==undefined&&c.weight>prior)found.push({...c,session_id:sess.id,session_date:sess.date});
-      if(prior===undefined||c.weight>prior)running[c.name]=c.weight;
+      if(!best[c.name]||c.weight>best[c.name].weight)best[c.name]={...c,session_id:sess.id,session_date:sess.date};
     });
   });
-  return found;
+  return Object.values(best).filter(c=>{
+    const base=baseline[c.name];
+    return base===undefined||c.weight>base;
+  });
 }
 
 // ══════ CLASSIFIER CACHE ══════
@@ -1369,8 +1372,10 @@ function App(){
     setPrScanBusy(true);setPrScanMsg('');
     try{
       const found=scanPrHistory(sess,prs);
-      const known=new Set(prQueue.map(c=>c.session_id+'|'+c.name));
-      const fresh=found.filter(c=>!known.has(c.session_id+'|'+c.name));
+      // Dedup by name alone (not session+name) — scanPrHistory now returns at most one candidate
+      // per movement+rep-scheme, so once it's been queued or resolved under any session, it's done.
+      const known=new Set(prQueue.map(c=>c.name));
+      const fresh=found.filter(c=>!known.has(c.name));
       if(fresh.length){
         const rows=await sbPost('pr_candidates',fresh.map(c=>({session_id:c.session_id,session_date:c.session_date,name:c.name,reps:c.reps,weight:c.weight,status:'pending'})),'user_id,session_id,name');
         setPrQueue(q=>[...q,...rows]);

@@ -130,19 +130,20 @@ check('dedupes to the heaviest set per movement+rep-scheme in a session', () => 
   assert.strictEqual(cands[0].weight, 225);
 });
 
-// ── scanPrHistory: chronological running-best, not "beats today's single PR" ──
-check('scanPrHistory only flags true chronological progression, not every set above the seed PR', () => {
+// ── scanPrHistory: collapses to ONE candidate per movement+rep-scheme (the all-time best),
+// never a staircase of every intermediate step-up ──
+check('scanPrHistory collapses multiple improving sightings to a single candidate — the all-time best', () => {
   const sessions = [
     strengthSession('Deadlift', 'hinge', [{ r: 1, w: 405 }]),
     { ...strengthSession('Deadlift', 'hinge', [{ r: 1, w: 425 }]), id: 's2', date: '2026-02-01' },
-    { ...strengthSession('Deadlift', 'hinge', [{ r: 1, w: 415 }]), id: 's3', date: '2026-03-01' }, // below the running best of 425 — not a new PR
+    { ...strengthSession('Deadlift', 'hinge', [{ r: 1, w: 415 }]), id: 's3', date: '2026-03-01' },
   ];
   const found = scanPrHistory(sessions, [{ category: 'lift', name: 'Deadlift', pr_value: 315 }]);
-  assert.strictEqual(found.length, 2);
-  assert.strictEqual(found[0].weight, 405);
-  assert.strictEqual(found[1].weight, 425);
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].weight, 425);
+  assert.strictEqual(found[0].session_id, 's2');
 });
-check('scanPrHistory silently seeds a rep-scheme\'s first-ever sighting instead of flagging it', () => {
+check('scanPrHistory with no seed PR at all still surfaces just the single all-time best', () => {
   const sessions = [
     { ...strengthSession('Clean', 'hinge', [{ r: 1, w: 245 }]), id: 'earlier', date: '2026-01-01' },
     { ...strengthSession('Clean', 'hinge', [{ r: 1, w: 275 }]), id: 'later', date: '2026-05-01' },
@@ -152,15 +153,20 @@ check('scanPrHistory silently seeds a rep-scheme\'s first-ever sighting instead 
   assert.strictEqual(found[0].session_id, 'later');
   assert.strictEqual(found[0].weight, 275);
 });
-check('scanPrHistory processes out-of-order input chronologically by date', () => {
+check('scanPrHistory does not surface anything when the all-time best does not beat the seed PR', () => {
+  const sessions = [strengthSession('Clean', 'hinge', [{ r: 1, w: 245 }])];
+  const found = scanPrHistory(sessions, [{ category: 'lift', name: 'Clean', pr_value: 275 }]);
+  assert.strictEqual(found.length, 0);
+});
+check('scanPrHistory processes out-of-order input chronologically by date (earliest occurrence of the max wins the date)', () => {
   const sessions = [
     { ...strengthSession('Clean', 'hinge', [{ r: 1, w: 275 }]), id: 'later', date: '2026-05-01' },
     { ...strengthSession('Clean', 'hinge', [{ r: 1, w: 245 }]), id: 'earlier', date: '2026-01-01' },
   ];
   const found = scanPrHistory(sessions, [{ category: 'lift', name: 'Clean', pr_value: 200 }]);
-  assert.strictEqual(found.length, 2);
-  assert.strictEqual(found[0].session_id, 'earlier');
-  assert.strictEqual(found[1].session_id, 'later');
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].session_id, 'later');
+  assert.strictEqual(found[0].weight, 275);
 });
 
 console.log(`\n${pass}/${pass + fail} passed`);
