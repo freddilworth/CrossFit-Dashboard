@@ -212,6 +212,8 @@ const NORM = [
   ['Clean & Jerk', 'Clean & Jerk'],
   ['DB Bent Over Row', 'DB Bent Over Row'],
   ['DB Bent Over Rows', 'DB Bent Over Row'],
+  ['Rope Climb', 'Rope Climb'],
+  ['Rope Climbs', 'Rope Climb'],
 ];
 
 for (const [name, expected] of NORM) {

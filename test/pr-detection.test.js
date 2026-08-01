@@ -296,16 +296,30 @@ check('rawGymnasticsReps unifies every burpee variation into one "Burpees" total
 });
 
 // ── Specific exclusions: too basic/ubiquitous to be a meaningful PR, or an assisted/added-load
-// pull-up variant that shouldn't pool with a plain bodyweight Pull-Up ──
-check('specific uncommon-to-PR gymnastics movements are excluded by exact name', () => {
-  ['Air Squat', 'V-up', 'Ring Dip', 'Sit-up', 'Banded Strict Pull-up', 'Side Plank', 'Leg Raises',
-   'Hollow Body Rocks', 'Weighted Strict Pull-ups', 'Plank', 'Box Step Ups', 'Alternating Pistols', 'Banded Pull-up']
+// pull-up variant that shouldn't pool with a plain bodyweight Pull-Up. Regex-based (not an exact-
+// name Set), so singular/plural and casing variants are all caught — not just whichever exact
+// phrasing happened to be listed. ──
+check('specific uncommon-to-PR gymnastics movements are excluded, singular and plural', () => {
+  ['Air Squat', 'Air Squats', 'V-up', 'V-ups', 'Ring Dip', 'Ring Dips', 'Sit-up', 'Sit-ups',
+   'Banded Strict Pull-up', 'Banded Strict Pull-ups', 'Side Plank', 'Side Planks', 'Leg Raise', 'Leg Raises',
+   'Hollow Body Rock', 'Hollow Body Rocks', 'Weighted Strict Pull-up', 'Weighted Strict Pull-ups',
+   'Plank', 'Planks', 'Box Step Up', 'Box Step Ups', 'Alternating Pistol', 'Alternating Pistols',
+   'Banded Pull-up', 'Banded Pull-ups', 'Weighted Pull-up', 'Weighted Pull-ups']
     .forEach(mov => assert.strictEqual(rawGymnasticsReps(metconSession([[mov, 20]])).length, 0, mov));
 });
 check('excluding banded/weighted pull-up variants does not exclude a plain Pull-Up', () => {
   const raw = rawGymnasticsReps(metconSession([['Pull-ups', 20]]));
   assert.strictEqual(raw.length, 1);
   assert.strictEqual(raw[0].name, 'Pull-Up');
+});
+
+// ── Rope Climb / Rope Climbs must normalize to the same movement, not track separately ──
+check('Rope Climb and Rope Climbs are the same movement', () => {
+  const sess = metconSession([['Rope Climb', 10], ['Rope Climbs', 5]]);
+  const raw = rawGymnasticsReps(sess);
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Rope Climb');
+  assert.strictEqual(raw[0].reps, 15);
 });
 
 console.log(`\n${pass}/${pass + fail} passed`);

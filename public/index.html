@@ -413,6 +413,7 @@ function normMov(nm){
   if(/^rmu$|ring\s*muscle.?up/.test(n))return'Ring Muscle-Up';
   if(/burpee\s*pull.?up/.test(n))return'Burpee Pull-Up';
   if(/^pull.?ups?$|^strict\s*pull.?ups?$/.test(n))return'Pull-Up';
+  if(/rope\s*climbs?/.test(n))return'Rope Climb';
   // Core
   if(/^k2e$|knee.*elbow/.test(n))return'Knees to Elbow';
   if(/^hkr$|hanging\s*knee\s*raise/.test(n))return'Hanging Knee Raise';
@@ -582,7 +583,10 @@ function scanPrHistory(sessions,currentPrs){
 // an assisted/added-load variant that shouldn't be pooled with its plain bodyweight counterpart
 // (Banded/Weighted Pull-up variants — a band makes reps easier, added weight makes them harder, so
 // mixing their totals with a plain Pull-Up's would misrepresent both). Still trackable via +Add PR.
-const GYM_PR_EXCLUDE_NAMES=new Set(['Air Squat','V-Up','Ring Dip','Sit-Up','Banded Strict Pull-up','Side Plank','Leg Raises','Hollow Body Rocks','Weighted Strict Pull-ups','Plank','Box Step Up','Alternating Pistols','Banded Pull-up']);
+// Regex, not an exact-name Set — an exact Set silently misses whatever singular/plural or exact
+// phrasing wasn't listed (e.g. "Banded Pull-ups" slipping past a Set entry for "Banded Pull-up"
+// only), the same class of bug that hit the weightlifting exclusion list's "Farmer's Carry" entry.
+const GYM_PR_EXCLUDE=/^air\s*squats?$|^v-?ups?$|^ring\s*dips?$|^sit-?ups?$|^side\s*planks?$|^leg\s*raises?$|^hollow\s*body\s*rocks?$|^planks?$|^box\s*step\s*ups?$|^alternating\s*pistols?$|banded.*pull.?up|weighted.*pull.?up/i;
 function rawGymnasticsReps(session){
   const totals={};
   function credit(rawName,reps){
@@ -595,7 +599,7 @@ function rawGymnasticsReps(session){
     // counts toward one unified "Burpees" total instead of being tracked as its own separate PR —
     // matches the "Burpees" movement group already used on the Home page.
     const bucket=/burpee/i.test(movement)?'Burpees':movement;
-    if(bucket!=='Burpees'&&GYM_PR_EXCLUDE_NAMES.has(bucket))return;
+    if(bucket!=='Burpees'&&GYM_PR_EXCLUDE.test(bucket))return;
     totals[bucket]=(totals[bucket]||0)+reps;
   }
   (session.blocks||[]).forEach(b=>{
