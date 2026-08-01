@@ -470,15 +470,23 @@ function normMov(nm){
 // from an accessory block is almost never someone's intentional rep-max attempt.
 const PR_REP_COUNTS=new Set([1,2,3,5,10]);
 const PR_PATTERNS=new Set(['squat','hinge','push','pull']);
+// Excluded from auto-detection even when the pattern/modality match: multi-movement complexes,
+// dumbbell/kettlebell/sandbag variants (implement weight varies session to session — not a stable
+// single-number PR the way a barbell lift is), and isolation/accessory movements. Single-leg
+// variants (reverse lunge, split squat, step-up...) are excluded via `sub` below. None of these are
+// lost — they're still trackable via the manual +Add PR flow, just not auto-flagged.
+const PR_EXCLUDE_RAW=/\+|complex|\bdb\b|dumbbell|\bkb\b|kettlebell|sandbag|sand\s*bag|bicep|tricep|lateral\s*raise|side\s*raise/i;
 function prCandidateName(movement,reps){return(reps===1?'':reps+'RM ')+movement;}
-// Returns the heaviest new-or-improved candidate per movement+rep-scheme found in one session,
-// compared against currentPrs (an array of {category,name,pr_value} — real confirmed PRs when
-// called live, or a synthetic running-best snapshot when called from the historical scan below).
-function extractPrCandidates(session,currentPrs){
+function isPrEligibleBlock(b){
+  if((b.k!=='strength'&&b.k!=='accessory')||!b.mov||!Array.isArray(b.sets))return false;
+  if(b.mod!=='weightlifting'||!PR_PATTERNS.has(b.pat)||b.sub==='single_leg')return false;
+  return!PR_EXCLUDE_RAW.test(b.mov);
+}
+// Heaviest set per movement+rep-scheme in one session, with no improvement filtering yet.
+function rawPrSets(session){
   const best={};
   (session.blocks||[]).forEach(b=>{
-    if((b.k!=='strength'&&b.k!=='accessory')||!b.mov||!Array.isArray(b.sets))return;
-    if(b.mod!=='weightlifting'||!PR_PATTERNS.has(b.pat))return;
+    if(!isPrEligibleBlock(b))return;
     const movement=normMov(b.mov)||b.mov;
     b.sets.forEach(s=>{
       const reps=Math.round(parseFloat(s.r));
@@ -488,25 +496,34 @@ function extractPrCandidates(session,currentPrs){
       if(!best[name]||weight>best[name].weight)best[name]={movement,reps,weight,name};
     });
   });
-  return Object.values(best).filter(c=>{
+  return Object.values(best);
+}
+// Day-to-day: only surfaces a genuine improvement over an ALREADY-tracked PR at that exact
+// movement + rep-scheme. A rep-scheme with no prior baseline is deliberately NOT auto-flagged — a
+// lone first sighting could be a warm-up, a technique set, anything; there's nothing to compare it
+// against yet. Establishing a lift's first tracked PR at a given rep-scheme is a manual +Add PR action.
+function extractPrCandidates(session,currentPrs){
+  return rawPrSets(session).filter(c=>{
     const existing=(currentPrs||[]).find(p=>p.category==='lift'&&p.name===c.name);
-    return!existing||c.weight>existing.pr_value;
+    return existing&&c.weight>existing.pr_value;
   });
 }
-// Walks every session chronologically, tracking a running-best per movement+rep-scheme seeded
-// from confirmed PRs, so a backfill over years of history surfaces the true progression (each
-// candidate a genuine new best at the time it happened) instead of flagging every historical set
-// that merely exceeds today's single confirmed value.
+// Backfill: walks every session chronologically, tracking a running-best per movement+rep-scheme
+// seeded from confirmed PRs. The first time a rep-scheme is seen with no seed at all, it's recorded
+// as the new baseline silently — not flagged, for the same "nothing to compare against yet" reason
+// as above. Only a LATER sighting that beats what came before (seeded or previously seen) surfaces
+// as a candidate, so history search finds true progression instead of every historical set that
+// happens to be a movement+rep-scheme's first appearance.
 function scanPrHistory(sessions,currentPrs){
   const running={};
   (currentPrs||[]).forEach(p=>{if(p.category==='lift')running[p.name]=p.pr_value;});
   const sorted=[...(sessions||[])].sort((a,b)=>a.date.localeCompare(b.date));
   const found=[];
   sorted.forEach(sess=>{
-    const runningPrs=Object.entries(running).map(([name,pr_value])=>({category:'lift',name,pr_value}));
-    extractPrCandidates(sess,runningPrs).forEach(c=>{
-      running[c.name]=c.weight;
-      found.push({...c,session_id:sess.id,session_date:sess.date});
+    rawPrSets(sess).forEach(c=>{
+      const prior=running[c.name];
+      if(prior!==undefined&&c.weight>prior)found.push({...c,session_id:sess.id,session_date:sess.date});
+      if(prior===undefined||c.weight>prior)running[c.name]=c.weight;
     });
   });
   return found;
@@ -1992,7 +2009,7 @@ function App(){
           <span class="ct" style="margin:0;border:none;padding:0">Pending PR Review${pendingPrQueue.length?' ('+pendingPrQueue.length+')':''}</span>
           <button class="rn" style="font-size:10px" disabled=${prScanBusy} onClick=${scanPrCandidateHistory}>${prScanBusy?'Scanning...':'Scan History for PRs'}</button>
         </div>
-        <div style="font-size:11px;color:#9BA3AC;margin-bottom:${prScanMsg||pendingPrQueue.length?'10px':'0'}">Scans your logged sessions for weightlifting sets that beat your current PR at that rep scheme (1, 2, 3, 5, or 10 reps) and queues them here for you to confirm or dismiss.</div>
+        <div style="font-size:11px;color:#9BA3AC;margin-bottom:${prScanMsg||pendingPrQueue.length?'10px':'0'}">Scans your logged sessions for barbell lifts that beat a prior best at that exact rep scheme (1, 2, 3, 5, or 10 reps) and queues them here for you to confirm or dismiss. A rep-scheme's first-ever appearance is never auto-flagged — add it via +Add PR below once you know it's a real one.</div>
         ${prScanMsg&&html`<div class="mut" style="margin-bottom:10px">${prScanMsg}</div>`}
         ${pendingPrQueue.length?pendingPrQueue.map(c=>{
           const key=pcKey(c);const busy=prCandidateBusy===key;
