@@ -3,6 +3,6 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "test": "node test/classifier.test.js"
+    "test": "node test/classifier.test.js && node test/pr-detection.test.js"
   }
 }

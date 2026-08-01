@@ -463,6 +463,55 @@ function normMov(nm){
   return nm;
 }
 
+// ══════ PR CANDIDATE DETECTION (Phase 1: weightlifting only) ══════
+// Only strength/accessory blocks carry explicit {r,w} sets tied to a single stated rep scheme —
+// metcon reps are workout-prescribed, not a tested max, so those are deliberately excluded here.
+// Rep counts are restricted to the ones lifters actually test as maxes; an incidental 7-rep set
+// from an accessory block is almost never someone's intentional rep-max attempt.
+const PR_REP_COUNTS=new Set([1,2,3,5,10]);
+const PR_PATTERNS=new Set(['squat','hinge','push','pull']);
+function prCandidateName(movement,reps){return(reps===1?'':reps+'RM ')+movement;}
+// Returns the heaviest new-or-improved candidate per movement+rep-scheme found in one session,
+// compared against currentPrs (an array of {category,name,pr_value} — real confirmed PRs when
+// called live, or a synthetic running-best snapshot when called from the historical scan below).
+function extractPrCandidates(session,currentPrs){
+  const best={};
+  (session.blocks||[]).forEach(b=>{
+    if((b.k!=='strength'&&b.k!=='accessory')||!b.mov||!Array.isArray(b.sets))return;
+    if(b.mod!=='weightlifting'||!PR_PATTERNS.has(b.pat))return;
+    const movement=normMov(b.mov)||b.mov;
+    b.sets.forEach(s=>{
+      const reps=Math.round(parseFloat(s.r));
+      const weight=parseFloat(s.w);
+      if(!weight||!PR_REP_COUNTS.has(reps))return;
+      const name=prCandidateName(movement,reps);
+      if(!best[name]||weight>best[name].weight)best[name]={movement,reps,weight,name};
+    });
+  });
+  return Object.values(best).filter(c=>{
+    const existing=(currentPrs||[]).find(p=>p.category==='lift'&&p.name===c.name);
+    return!existing||c.weight>existing.pr_value;
+  });
+}
+// Walks every session chronologically, tracking a running-best per movement+rep-scheme seeded
+// from confirmed PRs, so a backfill over years of history surfaces the true progression (each
+// candidate a genuine new best at the time it happened) instead of flagging every historical set
+// that merely exceeds today's single confirmed value.
+function scanPrHistory(sessions,currentPrs){
+  const running={};
+  (currentPrs||[]).forEach(p=>{if(p.category==='lift')running[p.name]=p.pr_value;});
+  const sorted=[...(sessions||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  const found=[];
+  sorted.forEach(sess=>{
+    const runningPrs=Object.entries(running).map(([name,pr_value])=>({category:'lift',name,pr_value}));
+    extractPrCandidates(sess,runningPrs).forEach(c=>{
+      running[c.name]=c.weight;
+      found.push({...c,session_id:sess.id,session_date:sess.date});
+    });
+  });
+  return found;
+}
+
 // ══════ CLASSIFIER CACHE ══════
 const _clsCache={};
 function clsAllCached(nm){
@@ -1019,6 +1068,12 @@ function App(){
   const[editPrDate,setEditPrDate]=useState('');
   const[editPrSaving,setEditPrSaving]=useState(false);
   const[pendingBenchmark,setPendingBenchmark]=useState(null);
+  const[pendingPrCandidates,setPendingPrCandidates]=useState([]);
+  const[prCandidateBusy,setPrCandidateBusy]=useState(null);
+  const[prEditVals,setPrEditVals]=useState({});
+  const[prQueue,setPrQueue]=useState([]);
+  const[prScanBusy,setPrScanBusy]=useState(false);
+  const[prScanMsg,setPrScanMsg]=useState('');
   const[bmOpen,setBmOpen]=useState(false);
   const[bmName,setBmName]=useState('');
   const[bmScore,setBmScore]=useState('');
@@ -1076,10 +1131,10 @@ function App(){
     const T=ms=>new Promise((_,r)=>setTimeout(r,ms));
     const fallback=setTimeout(()=>{if(!c)setReady(true);},12000);
     (async()=>{
-      try{const[s,p,b]=await Promise.race([
-        Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name')]),
+      try{const[s,p,b,pq]=await Promise.race([
+        Promise.all([sbGet('sessions','order=date.desc'),sbGet('prs','order=category,name'),sbGet('benchmarks','order=name'),sbGet('pr_candidates','order=session_date.desc')]),
         T(8000)
-      ]);if(!c){setSess(s);setPrs(p);setBench(b);}}catch(e){console.error('Load:',e);}
+      ]);if(!c){setSess(s);setPrs(p);setBench(b);setPrQueue(pq);}}catch(e){console.error('Load:',e);}
       clearTimeout(fallback);if(!c)setReady(true);
     })();return()=>{c=true;clearTimeout(fallback);};
   },[user]);
@@ -1088,6 +1143,7 @@ function App(){
   const lifts=useMemo(()=>prs.filter(p=>p.category==='lift'),[prs]);
   const gymPrs=useMemo(()=>prs.filter(p=>p.category==='gymnastics'),[prs]);
   const cardioPrs=useMemo(()=>prs.filter(p=>p.category==='cardio'),[prs]);
+  const pendingPrQueue=useMemo(()=>prQueue.filter(c=>c.status==='pending'),[prQueue]);
 
   // Dashboard aggregation (trailing calendar month)
   const dashP=useMemo(()=>calPeriod('month',0),[]);
@@ -1253,6 +1309,60 @@ function App(){
     setBmName(name);setBmScore(score);setBmDate(date||new Date().toISOString().slice(0,10));setBmNote('');setBmOpen(true);
   }
 
+  // ══════ PR CANDIDATE CONFIRM/DISMISS ══════
+  // A candidate is either transient (surfaced inline right after submit — never written to
+  // pr_candidates at all) or comes from the persistent backfill queue (has an `id`). Both flows
+  // funnel through these two handlers so Confirm/Dismiss behave identically either way.
+  function pcKey(c){return c.id||(c.session_id+'|'+c.name);}
+  async function confirmPrCandidate(c){
+    const key=pcKey(c);
+    if(prCandidateBusy)return;
+    setPrCandidateBusy(key);
+    try{
+      const weight=parseFloat(prEditVals[key])||c.weight;
+      const existing=prs.find(p=>p.category==='lift'&&p.name===c.name);
+      const history=[...(existing?.history||[]),{d:c.session_date,v:weight}];
+      await sbPost('prs',[{category:'lift',name:c.name,pr_value:weight,pr_display:String(weight),date:c.session_date,history}],'user_id,category,name');
+      const updatedPrs=await sbGet('prs','order=category,name');setPrs(updatedPrs);
+      if(c.id){await sb.from('pr_candidates').delete().eq('id',c.id);setPrQueue(q=>q.filter(x=>x.id!==c.id));}
+      else setPendingPrCandidates(list=>list.filter(x=>pcKey(x)!==key));
+      setPrEditVals(v=>{const{[key]:_,...rest}=v;return rest;});
+    }catch(e){console.error(e);}
+    setPrCandidateBusy(null);
+  }
+  async function dismissPrCandidate(c){
+    const key=pcKey(c);
+    if(prCandidateBusy)return;
+    setPrCandidateBusy(key);
+    try{
+      if(c.id){
+        await sb.from('pr_candidates').update({status:'dismissed'}).eq('id',c.id);
+        setPrQueue(q=>q.map(x=>x.id===c.id?{...x,status:'dismissed'}:x));
+      } else {
+        const[row]=await sbPost('pr_candidates',[{session_id:c.session_id,session_date:c.session_date,name:c.name,reps:c.reps,weight:c.weight,status:'dismissed'}],'user_id,session_id,name');
+        setPrQueue(q=>[...q,row]);
+        setPendingPrCandidates(list=>list.filter(x=>pcKey(x)!==key));
+      }
+      setPrEditVals(v=>{const{[key]:_,...rest}=v;return rest;});
+    }catch(e){console.error(e);}
+    setPrCandidateBusy(null);
+  }
+  async function scanPrCandidateHistory(){
+    if(prScanBusy)return;
+    setPrScanBusy(true);setPrScanMsg('');
+    try{
+      const found=scanPrHistory(sess,prs);
+      const known=new Set(prQueue.map(c=>c.session_id+'|'+c.name));
+      const fresh=found.filter(c=>!known.has(c.session_id+'|'+c.name));
+      if(fresh.length){
+        const rows=await sbPost('pr_candidates',fresh.map(c=>({session_id:c.session_id,session_date:c.session_date,name:c.name,reps:c.reps,weight:c.weight,status:'pending'})),'user_id,session_id,name');
+        setPrQueue(q=>[...q,...rows]);
+      }
+      setPrScanMsg(fresh.length?`Found ${fresh.length} new PR candidate${fresh.length>1?'s':''} in your history.`:'No new PR candidates found — history is already up to date.');
+    }catch(e){setPrScanMsg('Scan failed: '+e.message);}
+    setPrScanBusy(false);
+  }
+
   // ══════ WORKOUT GENERATOR HELPERS ══════
   function buildAthleteData(){
     const today=new Date().toISOString().slice(0,10);
@@ -1318,13 +1428,16 @@ function App(){
       const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inText,date:inDate})});
       if(!r.ok){const e=await r.json();throw new Error(e.error||'Parse failed');}
       const parsed=await r.json();
-      await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}],'user_id,date');
+      const[savedSession]=await sbPost('sessions',[{date:inDate,blocks:parsed.blocks||[],raw_text:inText,notes:parsed.notes||'',happiness:inHappy,fun:inFun}],'user_id,date');
       const updated=await sbGet('sessions','order=date.desc');
       setSess(updated);setPOk('Saved '+fd(inDate));
       const unclassified=findUnclassified(parsed.blocks||[]);
       if(unclassified.length)setPWarn(unclassified.length+' movement'+(unclassified.length>1?'s':'')+" couldn't be classified: "+unclassified.join(', '));
       const bm=detectBenchmark(inText,parsed.blocks||[]);
       if(bm)setPendingBenchmark({...bm,date:inDate});
+      const prCands=extractPrCandidates({blocks:parsed.blocks||[]},prs)
+        .map(c=>({...c,session_id:savedSession?.id,session_date:inDate}));
+      if(prCands.length)setPendingPrCandidates(prCands);
       setInText('');setInHappy('');setInFun('');setExp(inDate);
       setTimeout(()=>setPOk(''),5000);
     }catch(e){setPErr(e.message);}finally{setParsing(false);}
@@ -1434,6 +1547,19 @@ function App(){
             <button style="background:transparent;color:#9BA3AC;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onClick=${()=>setPendingBenchmark(null)}>Dismiss</button>
           </div>
         </div>`}
+        ${pendingPrCandidates.map(c=>{
+          const key=pcKey(c);const busy=prCandidateBusy===key;
+          return html`<div style="margin-top:12px;padding:12px 14px;background:#FFF6DF;border:1px solid #FFC145;border-radius:7px">
+            <div style="font-size:11px;font-weight:700;color:#946F00;margin-bottom:4px">PR detected: ${c.name}</div>
+            <div style="font-size:11px;color:#9BA3AC;margin-bottom:8px">${fd(c.session_date)} — is this a new personal record?</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="inp" style="width:80px;padding:4px 6px;font-size:11px" value=${prEditVals[key]??c.weight} onInput=${e=>setPrEditVals(v=>({...v,[key]:e.target.value}))}/>
+              <span style="font-size:11px;color:#9BA3AC">lbs</span>
+              <button class="btn" style="padding:6px 14px;font-size:11px" disabled=${busy} onClick=${()=>confirmPrCandidate(c)}>${busy?'Saving...':'Confirm PR'}</button>
+              <button style="background:transparent;color:#9BA3AC;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" disabled=${busy} onClick=${()=>dismissPrCandidate(c)}>Not a PR</button>
+            </div>
+          </div>`;
+        })}
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sessFilter||showImport?'8px':'0'}">
@@ -1861,6 +1987,27 @@ function App(){
       </div>`;
     }
     return html`<div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E0D9CF;padding-bottom:8px">
+          <span class="ct" style="margin:0;border:none;padding:0">Pending PR Review${pendingPrQueue.length?' ('+pendingPrQueue.length+')':''}</span>
+          <button class="rn" style="font-size:10px" disabled=${prScanBusy} onClick=${scanPrCandidateHistory}>${prScanBusy?'Scanning...':'Scan History for PRs'}</button>
+        </div>
+        <div style="font-size:11px;color:#9BA3AC;margin-bottom:${prScanMsg||pendingPrQueue.length?'10px':'0'}">Scans your logged sessions for weightlifting sets that beat your current PR at that rep scheme (1, 2, 3, 5, or 10 reps) and queues them here for you to confirm or dismiss.</div>
+        ${prScanMsg&&html`<div class="mut" style="margin-bottom:10px">${prScanMsg}</div>`}
+        ${pendingPrQueue.length?pendingPrQueue.map(c=>{
+          const key=pcKey(c);const busy=prCandidateBusy===key;
+          return html`<div style="background:#FFF6DF;border:1px solid #FFC145;border-radius:7px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+              <div style="font-size:12px;font-weight:700;color:#946F00">${c.name}</div>
+              <div style="font-size:11px;color:#9BA3AC">${fd(c.session_date)}</div>
+            </div>
+            <input class="inp" style="width:80px;padding:4px 6px;font-size:11px" value=${prEditVals[key]??c.weight} onInput=${e=>setPrEditVals(v=>({...v,[key]:e.target.value}))}/>
+            <span style="font-size:11px;color:#9BA3AC">lbs</span>
+            <button class="btn" style="padding:6px 14px;font-size:11px" disabled=${busy} onClick=${()=>confirmPrCandidate(c)}>${busy?'Saving...':'Confirm PR'}</button>
+            <button style="background:transparent;color:#9BA3AC;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" disabled=${busy} onClick=${()=>dismissPrCandidate(c)}>Dismiss</button>
+          </div>`;
+        }):!prScanMsg&&html`<div class="mut">No pending candidates. Run a scan after importing historical workouts, or log a new session to trigger detection automatically.</div>`}
+      </div>
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E0D9CF;padding-bottom:8px">
           <span class="ct" style="margin:0;border:none;padding:0">Lifting PRs</span>
