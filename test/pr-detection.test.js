@@ -85,11 +85,20 @@ check('heavier set than existing PR of same rep scheme is flagged', () => {
   assert.strictEqual(cands[0].weight, 325);
 });
 
-// ── Rep-count whitelist: only 1/2/3/5/10 count as tested maxes ──
+// ── Rep-count whitelist: only 1/3/5 count as tested maxes — 2RM and 10RM are uncommon enough in
+// practice to be more noise than signal, and are still trackable via manual +Add PR ──
 check('a 7-rep set is never a candidate, however heavy', () => {
   const sess = strengthSession('Back Squat', [{ r: 7, w: 500 }]);
   const currentPrs = [{ category: 'lift', name: 'Back Squat', pr_value: 100 }];
   assert.strictEqual(extractPrCandidates(sess, currentPrs).length, 0);
+});
+check('a 2-rep set is never a candidate', () => {
+  const sess = strengthSession('Back Squat', [{ r: 2, w: 500 }]);
+  assert.strictEqual(rawPrSets(sess).length, 0);
+});
+check('a 10-rep set is never a candidate', () => {
+  const sess = strengthSession('Back Squat', [{ r: 10, w: 500 }]);
+  assert.strictEqual(rawPrSets(sess).length, 0);
 });
 
 // ── Scope: only strength/accessory blocks with explicit sets qualify ──

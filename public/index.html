@@ -466,9 +466,10 @@ function normMov(nm){
 // ══════ PR CANDIDATE DETECTION (Phase 1: weightlifting only) ══════
 // Only strength/accessory blocks carry explicit {r,w} sets tied to a single stated rep scheme —
 // metcon reps are workout-prescribed, not a tested max, so those are deliberately excluded here.
-// Rep counts are restricted to the ones lifters actually test as maxes; an incidental 7-rep set
-// from an accessory block is almost never someone's intentional rep-max attempt.
-const PR_REP_COUNTS=new Set([1,2,3,5,10]);
+// Rep counts are restricted to 1/3/5 — the schemes lifters actually test as maxes and confirm as
+// PRs day to day. 2RM and 10RM are uncommon enough in practice to be more noise than signal when
+// auto-detected; still trackable via the manual +Add PR flow if someone wants to log one.
+const PR_REP_COUNTS=new Set([1,3,5]);
 const PR_PATTERNS=new Set(['squat','hinge','push','pull']);
 // Excluded from auto-detection even when the pattern/modality match: multi-movement complexes,
 // dumbbell/kettlebell/sandbag variants (implement weight varies session to session — not a stable
@@ -2023,7 +2024,7 @@ function App(){
           <span class="ct" style="margin:0;border:none;padding:0">Pending PR Review${pendingPrQueue.length?' ('+pendingPrQueue.length+')':''}</span>
           <button class="rn" style="font-size:10px" disabled=${prScanBusy} onClick=${scanPrCandidateHistory}>${prScanBusy?'Scanning...':'Scan History for PRs'}</button>
         </div>
-        <div style="font-size:11px;color:#9BA3AC;margin-bottom:${prScanMsg||pendingPrQueue.length?'10px':'0'}">Scans your logged sessions for barbell lifts that beat a prior best at that exact rep scheme (1, 2, 3, 5, or 10 reps) and queues them here for you to confirm or dismiss. A rep-scheme's first-ever appearance is never auto-flagged — add it via +Add PR below once you know it's a real one.</div>
+        <div style="font-size:11px;color:#9BA3AC;margin-bottom:${prScanMsg||pendingPrQueue.length?'10px':'0'}">Scans your logged sessions for barbell lifts that beat a prior best at that exact rep scheme (1, 3, or 5 reps) and queues them here for you to confirm or dismiss. A rep-scheme's first-ever appearance is never auto-flagged — add it via +Add PR below once you know it's a real one.</div>
         ${prScanMsg&&html`<div class="mut" style="margin-bottom:10px">${prScanMsg}</div>`}
         ${pendingPrQueue.length?pendingPrQueue.map(c=>{
           const key=pcKey(c);const busy=prCandidateBusy===key;
