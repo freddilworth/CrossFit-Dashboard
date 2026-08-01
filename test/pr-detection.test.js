@@ -285,5 +285,28 @@ check('scanGymnasticsPrHistory does not surface anything when the all-time best 
   assert.strictEqual(found.length, 0);
 });
 
+// ── Every burpee variation pools into one unified "Burpees" total (matches the Home page's
+// Burpees movement group) instead of each variant being tracked as its own separate PR ──
+check('rawGymnasticsReps unifies every burpee variation into one "Burpees" total', () => {
+  const sess = metconSession([['Burpees', 50], ['Burpee Over Bar', 30], ['Burpee Pull-up', 20]]);
+  const raw = rawGymnasticsReps(sess);
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Burpees');
+  assert.strictEqual(raw[0].reps, 100);
+});
+
+// ── Specific exclusions: too basic/ubiquitous to be a meaningful PR, or an assisted/added-load
+// pull-up variant that shouldn't pool with a plain bodyweight Pull-Up ──
+check('specific uncommon-to-PR gymnastics movements are excluded by exact name', () => {
+  ['Air Squat', 'V-up', 'Ring Dip', 'Sit-up', 'Banded Strict Pull-up', 'Side Plank', 'Leg Raises',
+   'Hollow Body Rocks', 'Weighted Strict Pull-ups', 'Plank', 'Box Step Ups', 'Alternating Pistols', 'Banded Pull-up']
+    .forEach(mov => assert.strictEqual(rawGymnasticsReps(metconSession([[mov, 20]])).length, 0, mov));
+});
+check('excluding banded/weighted pull-up variants does not exclude a plain Pull-Up', () => {
+  const raw = rawGymnasticsReps(metconSession([['Pull-ups', 20]]));
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Pull-Up');
+});
+
 console.log(`\n${pass}/${pass + fail} passed`);
 if (fail) process.exit(1);
