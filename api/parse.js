@@ -40,7 +40,7 @@ Strict Press, Push Press, Push Jerk, Split Jerk = pat:push, sub:vertical, mod:we
 Bench Press, DB Bench, Floor Press = pat:push, sub:horizontal, mod:weightlifting
 HSPU, Handstand Push-up = pat:push, sub:vertical, mod:gymnastics
 Push-up, Ring Push-up, Dip = pat:push, sub:horizontal, mod:gymnastics
-Pull-up, Butterfly Pull-up, C2B, Chest to Bar, Bar Muscle-up, Ring Muscle-up, Rope Climb = pat:pull, sub:vertical, mod:gymnastics
+Pull-up, Butterfly Pull-up, C2B, Chest to Bar, Bar Muscle-up (BMU), Ring Muscle-up (RMU), Rope Climb = pat:pull, sub:vertical, mod:gymnastics
 Ring Row = pat:pull, sub:horizontal, mod:gymnastics
 Barbell Row, DB Row, Pendlay Row = pat:pull, sub:horizontal, mod:weightlifting
 TTB, Toes to Bar, GHD Sit-up, Sit-up, L-sit, Plank, V-up, K2E, Knees to Elbow = pat:core, mod:gymnastics
@@ -48,7 +48,7 @@ Row (erg), Cal Row = pat:mono, sub:null, mod:monostructural
 Ski Erg, Cal Ski = pat:mono, sub:null, mod:monostructural
 Bike, Assault Bike, Cal Bike = pat:mono, sub:null, mod:monostructural
 Run, Sprint = pat:mono, sub:null, mod:monostructural
-Double Under, Single Under, Jump Rope = pat:mono, sub:null, mod:monostructural
+Double Under (DU), Single Under, Jump Rope = pat:mono, sub:null, mod:monostructural
 Box Jump, Box Jump Over = pat:mono, sub:null, mod:monostructural
 Burpee, Burpee over Bar = pat:mono, sub:null, mod:monostructural
 SA DB (single-arm dumbbell) movements: treat same as their barbell equivalents for pat/mod
@@ -62,6 +62,9 @@ QUANTITY RULES:
   - EMOM: reps * number_of_rounds_for_that_station (total_minutes / num_stations)
   - For Time: prescribed total reps
 - "1x5 - 185" means 1 set of 5 at 185. "2x5 - 205" means 2 sets of 5 at 205.
+- For Time scores: always normalize to MM:SS in the "score" field, even if the input wasn't
+  written that way — "6 min", "6 minutes", "in 6", "6m" all mean "6:00". "6:30 min" or "6 min 30"
+  mean "6:30". Never leave a bare minute count (e.g. "6 min") unconverted in "score".
 - Rx defaults to true unless stated otherwise (scaled, modified)
 - If text mentions notes like "felt heavy" or "knee bothering me", put in "notes"
 - Accessories (curls, lateral raise, face pull, etc.) use k:"accessory"

@@ -217,8 +217,8 @@ function cls(nm){
   if(/plank\s*rows?/.test(n))return{pat:'pull',sub:'horizontal',mod:'weightlifting'};
   if(/ghd|sit.?up|l-sit|plank|v-up|ab\s*mat|k2e|knee.*elbow|hollow|leg\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   if(/\bhkr\b|hanging\s*knee\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
-  // Pull — vertical (BMU before generic muscle-up)
-  if(/\bbmu\b|bar\s*muscle.?up/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
+  // Pull — vertical (BMU/RMU abbreviations before generic muscle-up)
+  if(/\bbmu\b|\brmu\b|bar\s*muscle.?up|ring\s*muscle.?up/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
   if(/pull.?up|muscle.?up|c2b|chest.?to|rope\s*climb|butterfly|kipping/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
   if(/strict\s*pull/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
   // Pull — horizontal
@@ -391,6 +391,7 @@ function normMov(nm){
   // Pull variants — specific first
   if(/\bc2b\b|chest.?to.?bar/.test(n))return'Chest to Bar';
   if(/^bmu$|bar\s*muscle.?up/.test(n))return'Bar Muscle-Up';
+  if(/^rmu$|ring\s*muscle.?up/.test(n))return'Ring Muscle-Up';
   if(/burpee\s*pull.?up/.test(n))return'Burpee Pull-Up';
   if(/^pull.?ups?$|^strict\s*pull.?ups?$/.test(n))return'Pull-Up';
   // Core
