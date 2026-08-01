@@ -297,9 +297,11 @@ const PVd={pat:'push',sub:'vertical',mod:'weightlifting',dualTon:true};
 const BD={pat:null,sub:'bounding',mod:'monostructural'};
 // Loaded carry held against the body (sandbag): counts as pulling strength, but tonnage is meters/distanceDiv (rep-equivalent) x load — not meters x load
 const RHcarry={pat:'pull',sub:'horizontal',mod:'carries',distanceDiv:10};
-// Sled push: same distance-logged/rep-equivalent tonnage rationale as RHcarry, but the motion is a
-// horizontal press against the sled, not a pull — a sled drag/pull (behind you) stays RHcarry.
-const PHcarry={pat:'push',sub:'horizontal',mod:'carries',distanceDiv:10};
+// Sled push: pattern is push (a press against the sled), not pull — but unlike other loaded
+// carries, its tonnage isn't credited at all right now (zeroTon) rather than distance-scaled, since
+// sled resistance (friction, surface, sled weight) isn't comparable to a lift/carry's load the same
+// way meters-of-carry is. Frequency still counts it as a push-pattern movement; only tonnage is zeroed.
+const PHcarry={pat:'push',sub:'horizontal',mod:'carries',zeroTon:true};
 
 function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
@@ -362,12 +364,16 @@ function clsAll(nm){
   if(/\bcleans?\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RVd];
 
   // ── Sled: push and pull/drag are different movements, unlike the generic carries below — a sled
-  // push is a horizontal press against the sled, a drag/pull/tow is loaded-carry pulling strength.
-  // Both are distance-logged (parse.js DISTANCE RULE stores total meters as r), so tonnage uses
-  // distance/distanceDiv (rep-equivalent) x load, same rationale as the sandbag carry rule below —
-  // must come before the generic sandbag/carry rules so it isn't shadowed by them.
+  // push is a horizontal press against the sled (tonnage not credited — see PHcarry), a drag/pull/
+  // tow is loaded-carry pulling strength (distance-scaled tonnage like the other carries here).
+  // Must come before the generic sandbag/carry rules below so it isn't shadowed by them.
   if(/sled\s*push|push\s*sled/.test(n))return[PHcarry];
   if(/sled/.test(n))return[RHcarry];
+
+  // ── Farmer's Carry / Yoke Walk: distance-logged (parse.js DISTANCE RULE stores total meters as
+  // r), same rep-equivalent tonnage rationale as the sandbag carry rule right below — must require
+  // "carry"/"walk" so this doesn't shadow the farmer-position-lunge rule in cls() above ──
+  if(/farmer'?s?\s*(carry|walk)\b|\byoke\b/.test(n))return[RHcarry];
 
   // ── Sandbag carry / hold / walk: loaded carry, pulling strength but not an active lift — tonnage uses distance/rep-equivalent, not meters ──
   if(/sandbag\s*(carry|hold|walk)|\bsb\s*(carry|hold|walk)\b/.test(n))return[RHcarry];
@@ -951,7 +957,7 @@ function agg(sessions,start,end){
         const cs=clsAllCached(b.mov);
         const dDiv=cs[0]?.distanceDiv||1;
         const reps=(Array.isArray(b.sets)?b.sets:[]).reduce((s,x)=>s+(parseFloat(x.r)||(x.amrap?parseScoreReps(b.score):0)),0)/dDiv;
-        const ton=calcStrengthTon(b.sets,b.score)/dDiv;
+        const ton=cs[0]?.zeroTon?0:calcStrengthTon(b.sets,b.score)/dDiv;
         cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,reps,(i===0||c.dualTon)?ton:0,i===0,b.mov));
         note(b.mov,cs,reps,ton,sess.date);
         noteMovementTotals(b.mov,cs,reps);
@@ -962,8 +968,9 @@ function agg(sessions,start,end){
           const cs=clsAllCached(pm.n);
           const dDiv=cs[0]?.distanceDiv||1;
           const pr=(parseFloat(pm.r)||0)/dDiv;const pw=parseFloat(pm.w)||0;
-          cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?pr*pw:0,i===0,pm.n));
-          note(pm.n,cs,pr,pr*pw,sess.date);
+          const ton=cs[0]?.zeroTon?0:pr*pw;
+          cs.forEach((c,i)=>add(c.pat,c.sub,i===0?c.mod:null,pr,(i===0||c.dualTon)?ton:0,i===0,pm.n));
+          note(pm.n,cs,pr,ton,sess.date);
           noteMovementTotals(pm.n,cs,pr);
         }
       }

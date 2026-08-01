@@ -56,7 +56,9 @@ const SINGLE = [
   ['Bicep Curl', { pat: 'pull', sub: 'vertical', mod: 'weightlifting' }],
   ['DB Bicep Curls', { pat: 'pull', sub: 'vertical', mod: 'weightlifting' }],
   ['Back Extensions', { pat: 'hinge', sub: null, mod: 'weightlifting' }],
-  ["Farmer's Carry", { pat: 'pull', sub: null, mod: 'carries' }],
+  // sub: 'horizontal' (not null) now that this routes through the same distanceDiv-scaled RHcarry
+  // treatment as Sandbag Carry below — consistent classification across carry-type movements.
+  ["Farmer's Carry", { pat: 'pull', sub: 'horizontal', mod: 'carries' }],
   // Sled push is a horizontal press against the sled, not a pull — a drag/pull/tow stays a pull.
   ['Sled Push', { pat: 'push', sub: 'horizontal', mod: 'carries' }],
   ['Sled Drag', { pat: 'pull', sub: 'horizontal', mod: 'carries' }],
@@ -156,19 +158,30 @@ for (const [name, expected] of COMPOUND) {
   });
 }
 
-// ── Distance-logged loaded carries (sled, sandbag, farmer's carry...) get r stored as total
-// meters (see api/parse.js DISTANCE RULE) — tonnage must scale by distanceDiv (rep-equivalent),
+// ── Distance-logged loaded carries (sandbag, farmer's carry, yoke walk, sled drag) get r stored as
+// total meters (see api/parse.js DISTANCE RULE) — tonnage must scale by distanceDiv (rep-equivalent),
 // not raw meters x load, or a single 80m set inflates tonnage far beyond any real rep-based lift.
 const DISTANCE_DIV = [
-  ['Sled Push', 10],
   ['Sled Drag', 10],
   ['Sandbag Carry', 10],
+  ["Farmer's Carry", 10],
+  ['Farmer Carry', 10],
+  ['Yoke Walk', 10],
 ];
 for (const [name, expected] of DISTANCE_DIV) {
   check(`clsAll("${name}") distanceDiv`, () => {
     assert.strictEqual(clsAll(name)[0].distanceDiv, expected, `distanceDiv: got ${clsAll(name)[0].distanceDiv}, want ${expected}`);
   });
 }
+
+// ── Sled Push is distance-logged too, but its tonnage is zeroed rather than distance-scaled —
+// sled resistance isn't comparable to a lift/carry's load the same way meters-of-carry is. Pattern
+// frequency still counts it as push; distanceDiv should be absent since ton is forced to 0 regardless. ──
+check('clsAll("Sled Push") is zeroTon, not distanceDiv-scaled', () => {
+  const c = clsAll('Sled Push')[0];
+  assert.strictEqual(c.zeroTon, true, 'zeroTon should be true');
+  assert.strictEqual(c.distanceDiv, undefined, 'distanceDiv should not be set — tonnage is zeroed, not scaled');
+});
 
 // ── normMov: name -> expected canonical display name ──
 const NORM = [
