@@ -519,13 +519,15 @@ function extractPrCandidates(session,currentPrs){
   });
 }
 // Backfill: finds, per movement+rep-scheme, the single heaviest set anywhere in history (with the
-// date it happened) and surfaces it only if it beats the seeded confirmed-PR baseline (or if there
-// is no baseline at all — the lift has simply never been tracked at that rep-scheme before). This
-// deliberately collapses the whole chronological climb to ONE candidate per movement+rep-scheme —
-// flagging every intermediate step-up (e.g. a routine +2.5lb increase from a linear-progression
-// program) would bury the one number that actually matters under a staircase of superseded ones,
-// and would also mean confirming an early low candidate then re-reviewing a higher one for the same
-// lift days later, which is exactly the noise the review queue should avoid.
+// date it happened), and — same rule as extractPrCandidates above, no exception for the backfill —
+// surfaces it ONLY if an already-confirmed PR exists at that exact movement+rep-scheme for it to
+// beat. A rep-scheme with zero prior baseline is never auto-flagged, full stop: a lone sighting
+// (even the best one ever logged for it) could be a one-off technique day, and there's nothing to
+// compare it against. This deliberately collapses the whole chronological climb to at most ONE
+// candidate per movement+rep-scheme — flagging every intermediate step-up (e.g. a routine +2.5lb
+// increase from a linear-progression program) would bury the one number that matters under a
+// staircase of superseded ones. Establishing a rep-scheme's first tracked PR is a manual +Add PR
+// action; once that baseline exists, future improvements — from history or new sessions — surface here.
 function scanPrHistory(sessions,currentPrs){
   const baseline={};
   (currentPrs||[]).forEach(p=>{if(p.category==='lift')baseline[p.name]=p.pr_value;});
@@ -538,7 +540,7 @@ function scanPrHistory(sessions,currentPrs){
   });
   return Object.values(best).filter(c=>{
     const base=baseline[c.name];
-    return base===undefined||c.weight>base;
+    return base!==undefined&&c.weight>base;
   });
 }
 
