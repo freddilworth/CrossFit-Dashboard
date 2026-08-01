@@ -57,7 +57,10 @@ const SINGLE = [
   ['DB Bicep Curls', { pat: 'pull', sub: 'vertical', mod: 'weightlifting' }],
   ['Back Extensions', { pat: 'hinge', sub: null, mod: 'weightlifting' }],
   ["Farmer's Carry", { pat: 'pull', sub: null, mod: 'carries' }],
-  ['Sled Push', { pat: 'pull', sub: null, mod: 'carries' }],
+  // Sled push is a horizontal press against the sled, not a pull — a drag/pull/tow stays a pull.
+  ['Sled Push', { pat: 'push', sub: 'horizontal', mod: 'carries' }],
+  ['Sled Drag', { pat: 'pull', sub: 'horizontal', mod: 'carries' }],
+  ['Sled Pull', { pat: 'pull', sub: 'horizontal', mod: 'carries' }],
   ['Dead Hang', { pat: 'pull', sub: null, mod: 'carries' }],
   ['Kipping T2B', { pat: 'core', sub: null, mod: 'gymnastics' }],
   ['T2B', { pat: 'core', sub: null, mod: 'gymnastics' }],
@@ -150,6 +153,20 @@ const COMPOUND = [
 for (const [name, expected] of COMPOUND) {
   check(`clsAll("${name}") (compound)`, () => {
     assert.deepStrictEqual(clsAll(name), expected);
+  });
+}
+
+// ── Distance-logged loaded carries (sled, sandbag, farmer's carry...) get r stored as total
+// meters (see api/parse.js DISTANCE RULE) — tonnage must scale by distanceDiv (rep-equivalent),
+// not raw meters x load, or a single 80m set inflates tonnage far beyond any real rep-based lift.
+const DISTANCE_DIV = [
+  ['Sled Push', 10],
+  ['Sled Drag', 10],
+  ['Sandbag Carry', 10],
+];
+for (const [name, expected] of DISTANCE_DIV) {
+  check(`clsAll("${name}") distanceDiv`, () => {
+    assert.strictEqual(clsAll(name)[0].distanceDiv, expected, `distanceDiv: got ${clsAll(name)[0].distanceDiv}, want ${expected}`);
   });
 }
 

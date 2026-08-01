@@ -188,8 +188,10 @@ function cls(nm){
   const n=(nm||'').toLowerCase().trim();
   if(!n)return{pat:null,sub:null,mod:null};
   // Carries/Holds — grip-and-carry loaded work counts as pulling strength, same rationale as the
-  // sandbag carry/hold classification below
-  if(/sled/.test(n))return{pat:'pull',sub:null,mod:'carries'};
+  // sandbag carry/hold classification below. Sled push is the exception: it's a horizontal press
+  // against the sled, not a pull, so it must be checked first.
+  if(/sled\s*push|push\s*sled/.test(n))return{pat:'push',sub:'horizontal',mod:'carries'};
+  if(/sled/.test(n))return{pat:'pull',sub:'horizontal',mod:'carries'};
   // Farmer-position lunge: held like a carry but the movement itself is a single-leg squat, not a carry
   if(/farmers?\s*reverse\s*lunge|reverse\s*lunge.*farmers?/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
   if(/farmer|yoke|front\s*rack\s*carry|sandbag\s*carry|\bsb\s*carry\b|sandbag\s*hold|\bsb\s*hold\b|bear\s*hug|waiter\s*carry/.test(n))return{pat:'pull',sub:null,mod:'carries'};
@@ -295,6 +297,9 @@ const PVd={pat:'push',sub:'vertical',mod:'weightlifting',dualTon:true};
 const BD={pat:null,sub:'bounding',mod:'monostructural'};
 // Loaded carry held against the body (sandbag): counts as pulling strength, but tonnage is meters/distanceDiv (rep-equivalent) x load — not meters x load
 const RHcarry={pat:'pull',sub:'horizontal',mod:'carries',distanceDiv:10};
+// Sled push: same distance-logged/rep-equivalent tonnage rationale as RHcarry, but the motion is a
+// horizontal press against the sled, not a pull — a sled drag/pull (behind you) stays RHcarry.
+const PHcarry={pat:'push',sub:'horizontal',mod:'carries',distanceDiv:10};
 
 function clsAll(nm){
   const n=(nm||'').toLowerCase().trim();
@@ -355,6 +360,14 @@ function clsAll(nm){
 
   // ── Clean variants (no jerk): hinge + vertical pull (active) ──
   if(/\bcleans?\b/.test(n)&&!/jerk|c&j/.test(n))return[H,RVd];
+
+  // ── Sled: push and pull/drag are different movements, unlike the generic carries below — a sled
+  // push is a horizontal press against the sled, a drag/pull/tow is loaded-carry pulling strength.
+  // Both are distance-logged (parse.js DISTANCE RULE stores total meters as r), so tonnage uses
+  // distance/distanceDiv (rep-equivalent) x load, same rationale as the sandbag carry rule below —
+  // must come before the generic sandbag/carry rules so it isn't shadowed by them.
+  if(/sled\s*push|push\s*sled/.test(n))return[PHcarry];
+  if(/sled/.test(n))return[RHcarry];
 
   // ── Sandbag carry / hold / walk: loaded carry, pulling strength but not an active lift — tonnage uses distance/rep-equivalent, not meters ──
   if(/sandbag\s*(carry|hold|walk)|\bsb\s*(carry|hold|walk)\b/.test(n))return[RHcarry];
