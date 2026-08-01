@@ -597,8 +597,11 @@ function rawGymnasticsReps(session){
     if(!c||c.mod!=='gymnastics')return;
     // Every burpee variation (standard, over the bar, to target, box jump, pull-up, broad jump...)
     // counts toward one unified "Burpees" total instead of being tracked as its own separate PR —
-    // matches the "Burpees" movement group already used on the Home page.
-    const bucket=/burpee/i.test(movement)?'Burpees':movement;
+    // matches the "Burpees" movement group already used on the Home page. Checked against rawName,
+    // not just the normalized name — normMov strips "burpee" entirely for some variants (e.g.
+    // "Burpee Box Step Over" collapses to bare "Box Step Over"), which would otherwise let that
+    // variant slip through as its own untracked, unexcluded movement instead of joining Burpees.
+    const bucket=(/burpee/i.test(rawName)||/burpee/i.test(movement))?'Burpees':movement;
     if(bucket!=='Burpees'&&GYM_PR_EXCLUDE.test(bucket))return;
     totals[bucket]=(totals[bucket]||0)+reps;
   }

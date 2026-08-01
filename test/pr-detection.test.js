@@ -294,6 +294,13 @@ check('rawGymnasticsReps unifies every burpee variation into one "Burpees" total
   assert.strictEqual(raw[0].name, 'Burpees');
   assert.strictEqual(raw[0].reps, 100);
 });
+check('Burpee Box Step Over joins Burpees too, even though its name-normalizer strips "burpee" entirely', () => {
+  const sess = metconSession([['Burpees', 50], ['Burpee Box Step Over', 20]]);
+  const raw = rawGymnasticsReps(sess);
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Burpees');
+  assert.strictEqual(raw[0].reps, 70);
+});
 
 // ── Specific exclusions: too basic/ubiquitous to be a meaningful PR, or an assisted/added-load
 // pull-up variant that shouldn't pool with a plain bodyweight Pull-Up. Regex-based (not an exact-
