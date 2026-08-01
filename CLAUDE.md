@@ -47,17 +47,20 @@ Vercel. Push to `main` auto-deploys. GitHub PAT is embedded in the git remote UR
   - Tonnage for a movement = `r × w`. Pull tonnage = sum where `pat == "pull"`.
 
 **`prs`** — personal records
-- `id`, `category` ("lift"), `name`, `pr_value` (number), `pr_display` (string), `date`
+- `id`, `category` ("lift" | "gymnastics" | "cardio"), `name`, `pr_value` (number), `pr_display` (string), `date`
 - `history` (JSON array of `{d: date, v: value}`)
 
 **`benchmarks`** — named benchmark workouts (Murph, Fran, etc.)
 - `id`, `name`
 - `scores` (JSON array of `{d: date, v: result string, note: string}`)
 
-**`pr_candidates`** — auto-detected PR candidates awaiting user confirmation (migration `003_pr_candidates.sql`, not yet applied to production — run it in the Supabase SQL editor before this feature works live)
-- `id`, `session_id` (FK -> sessions, cascades on delete), `session_date`, `name` (matches `prs.name` convention), `reps`, `weight`, `status` ("pending" | "dismissed")
-- Populated by the "Scan History for PRs" backfill button in the PRs tab (`scanPrHistory` in `public/index.html`); day-to-day detection right after logging a session is transient and only writes here on Dismiss, so a later backfill doesn't resurface it
-- Detection is Phase 1 scope only: weightlifting lifts (`pat` in squat/hinge/push/pull, `mod === 'weightlifting'`) from `strength`/`accessory` blocks' explicit `sets` arrays, matched by movement + exact rep count (1/2/3/5/10 only). Gymnastics and cardio PR detection are future phases.
+**`pr_candidates`** — auto-detected PR candidates awaiting user confirmation (migrations `003_pr_candidates.sql` + `004_gymnastics_pr_candidates.sql`, both applied to production)
+- `id`, `session_id` (FK -> sessions, cascades on delete), `session_date`, `category` ("lift" | "gymnastics", defaults "lift"), `name` (matches `prs.name` convention), `reps`, `weight`, `status` ("pending" | "dismissed")
+- For `category: "lift"`: `reps` = rep scheme (1/3/5), `weight` = lbs. For `category: "gymnastics"`: `reps` = total reps (the PR value itself, no rep-scheme concept), `weight` is null.
+- Populated by the "Scan History for PRs" backfill button in the PRs tab (`scanPrHistory` + `scanGymnasticsPrHistory` in `public/index.html`); day-to-day detection right after logging a session is transient and only writes here on Dismiss, so a later backfill doesn't resurface it
+- Lift detection (Phase 1): weightlifting lifts (`pat` in squat/hinge/push/pull, `mod === 'weightlifting'`) from `strength`/`accessory` blocks' explicit `sets` arrays, matched by movement + exact rep count (1/3/5 only — 2RM/10RM excluded as uncommon). Excludes complexes, DB/KB/sandbag implements, isolation work, single-leg variants, and a specific list of uncommon-to-PR lifts (see `PR_EXCLUDE_NAME`/`PR_EXCLUDE_NAMES` in `public/index.html`).
+- Gymnastics detection (Phase 2): `mod === 'gymnastics'` movements — no weight/rep-scheme concept, so the PR metric is highest total reps for a movement performed anywhere within one session, summed across strength/accessory sets AND metcon reps (metcon reps count here, unlike lift detection). Cardio PR detection is a future phase.
+- Both categories require an existing confirmed PR to beat for day-to-day (post-submit) detection; the historical backfill scan surfaces a movement's single all-time-best value even with no prior baseline (relying on Dismiss, not stricter detection, to handle the occasional false positive — e.g. a one-off light/easy session).
 
 ## SaaS plans (in progress)
 Owner is exploring turning this into a paid multi-user product. Key architecture needs: Supabase Auth (row-level security per user), Stripe subscriptions, per-user data isolation. Anthropic API billing is separate from Claude.ai — pay-as-you-go at console.anthropic.com, ~$0.12/user/month at current usage.

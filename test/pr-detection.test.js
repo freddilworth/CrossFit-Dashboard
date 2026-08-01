@@ -24,8 +24,8 @@ const document = { getElementById: () => ({}) };
 const h = () => {}; const render = () => {}; const htm = { bind: () => () => {} };
 const useState = (x) => [x, () => {}]; const useEffect = () => {}; const useMemo = (f) => f();
 `;
-new Function(stub + src + `;globalThis.__prTest = { rawPrSets, extractPrCandidates, scanPrHistory, prCandidateName, isPrEligibleBlock };`)();
-const { rawPrSets, extractPrCandidates, scanPrHistory, prCandidateName, isPrEligibleBlock } = globalThis.__prTest;
+new Function(stub + src + `;globalThis.__prTest = { rawPrSets, extractPrCandidates, scanPrHistory, prCandidateName, isPrEligibleBlock, rawGymnasticsReps, extractGymnasticsPrCandidates, scanGymnasticsPrHistory };`)();
+const { rawPrSets, extractPrCandidates, scanPrHistory, prCandidateName, isPrEligibleBlock, rawGymnasticsReps, extractGymnasticsPrCandidates, scanGymnasticsPrHistory } = globalThis.__prTest;
 
 let pass = 0, fail = 0;
 function check(label, fn) {
@@ -204,6 +204,85 @@ check('scanPrHistory processes out-of-order input chronologically by date (earli
 check('scanPrHistory excludes single-leg/implement/isolation movements from history too', () => {
   const sessions = [strengthSession('Reverse Lunge', [{ r: 10, w: 500 }])];
   assert.strictEqual(scanPrHistory(sessions, []).length, 0);
+});
+
+// ══════ GYMNASTICS PR DETECTION (total reps in a single session) ══════
+function metconSession(movements, extra = {}) {
+  return { id: 's1', date: '2026-01-15', blocks: [{ k: 'metcon', pm: movements.map(([n, r]) => ({ n, r })), ...extra }] };
+}
+
+check('rawGymnasticsReps sums metcon reps for a gymnastics movement', () => {
+  const sess = metconSession([['Pull-ups', 30]]);
+  const raw = rawGymnasticsReps(sess);
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Pull-Up');
+  assert.strictEqual(raw[0].reps, 30);
+});
+check('rawGymnasticsReps sums across strength/accessory sets AND metcon reps in the same session, unified by normalized name', () => {
+  const sess = {
+    id: 's1', date: '2026-01-15',
+    blocks: [
+      { k: 'accessory', mov: 'Strict Pull-ups', sets: [{ r: 5, w: 0 }, { r: 5, w: 0 }] }, // 10 total
+      { k: 'metcon', pm: [{ n: 'Pull-ups', r: 20 }] }, // 20 total — same movement, different raw name
+    ],
+  };
+  const raw = rawGymnasticsReps(sess);
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Pull-Up');
+  assert.strictEqual(raw[0].reps, 30);
+});
+check('rawGymnasticsReps excludes non-gymnastics movements (e.g. a barbell lift in the same session)', () => {
+  const sess = {
+    id: 's1', date: '2026-01-15',
+    blocks: [
+      { k: 'strength', mov: 'Back Squat', sets: [{ r: 5, w: 225 }] },
+      { k: 'metcon', pm: [{ n: 'Toes to Bar', r: 15 }] },
+    ],
+  };
+  const raw = rawGymnasticsReps(sess);
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Toes to Bar');
+});
+check('rawGymnasticsReps excludes multi-movement complexes', () => {
+  const sess = { id: 's1', date: '2026-01-15', blocks: [{ k: 'accessory', mov: 'Pull-up + Push-up', sets: [{ r: 10, w: 0 }] }] };
+  assert.strictEqual(rawGymnasticsReps(sess).length, 0);
+});
+
+check('extractGymnasticsPrCandidates requires an existing baseline, same as weightlifting', () => {
+  const sess = metconSession([['Pull-ups', 30]]);
+  assert.strictEqual(extractGymnasticsPrCandidates(sess, []).length, 0);
+  const cands = extractGymnasticsPrCandidates(sess, [{ category: 'gymnastics', name: 'Pull-Up', pr_value: 25 }]);
+  assert.strictEqual(cands.length, 1);
+  assert.strictEqual(cands[0].reps, 30);
+});
+check('extractGymnasticsPrCandidates does not flag a session that does not beat the baseline', () => {
+  const sess = metconSession([['Pull-ups', 20]]);
+  const cands = extractGymnasticsPrCandidates(sess, [{ category: 'gymnastics', name: 'Pull-Up', pr_value: 25 }]);
+  assert.strictEqual(cands.length, 0);
+});
+
+check('scanGymnasticsPrHistory collapses to a single all-time-best candidate per movement', () => {
+  const sessions = [
+    metconSession([['Pull-ups', 30]]),
+    { ...metconSession([['Pull-ups', 45]]), id: 's2', date: '2026-02-01' },
+    { ...metconSession([['Pull-ups', 38]]), id: 's3', date: '2026-03-01' },
+  ];
+  const found = scanGymnasticsPrHistory(sessions, []);
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].reps, 45);
+  assert.strictEqual(found[0].session_id, 's2');
+});
+check('scanGymnasticsPrHistory surfaces the all-time best even with no existing baseline', () => {
+  const sessions = [metconSession([['Toes to Bar', 60]])];
+  const found = scanGymnasticsPrHistory(sessions, []);
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].name, 'Toes to Bar');
+  assert.strictEqual(found[0].reps, 60);
+});
+check('scanGymnasticsPrHistory does not surface anything when the all-time best does not beat the seed PR', () => {
+  const sessions = [metconSession([['Pull-ups', 20]])];
+  const found = scanGymnasticsPrHistory(sessions, [{ category: 'gymnastics', name: 'Pull-Up', pr_value: 25 }]);
+  assert.strictEqual(found.length, 0);
 });
 
 console.log(`\n${pass}/${pass + fail} passed`);
