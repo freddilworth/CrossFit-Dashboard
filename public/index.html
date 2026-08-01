@@ -473,14 +473,23 @@ const PR_PATTERNS=new Set(['squat','hinge','push','pull']);
 // Excluded from auto-detection even when the pattern/modality match: multi-movement complexes,
 // dumbbell/kettlebell/sandbag variants (implement weight varies session to session — not a stable
 // single-number PR the way a barbell lift is), and isolation/accessory movements. Single-leg
-// variants (reverse lunge, split squat, step-up...) are excluded via `sub` below. None of these are
-// lost — they're still trackable via the manual +Add PR flow, just not auto-flagged.
-const PR_EXCLUDE_RAW=/\+|complex|\bdb\b|dumbbell|\bkb\b|kettlebell|sandbag|sand\s*bag|bicep|tricep|lateral\s*raise|side\s*raise/i;
+// variants (reverse lunge, split squat, step-up...) are excluded via the classifier's `sub` below.
+// None of these are lost — they're still trackable via the manual +Add PR flow, just not auto-flagged.
+// Tested against the NORMALIZED name (normMov), not the raw text, so abbreviations funnel through
+// the same canonical form ("SB Clean" -> "Sandbag Clean") and can't slip past this by spelling.
+const PR_EXCLUDE_NAME=/\+|complex|\bdb\b|dumbbell|\bkb\b|kettlebell|sandbag|sand\s*bag|bicep|tricep|lateral\s*raise|side\s*raise/i;
 function prCandidateName(movement,reps){return(reps===1?'':reps+'RM ')+movement;}
+// Classifies from the movement NAME itself via the app's own authoritative classifier
+// (clsAllCached/normMov), rather than trusting whatever pat/sub/mod the parsing LLM stored on the
+// block — those are assigned per-session at log time (see api/parse.js) and can disagree with the
+// classifier's current rules (e.g. an older session logging "Reverse Lunge" without sub:"single_leg"
+// set), which would otherwise let an ineligible movement slip through undetected.
 function isPrEligibleBlock(b){
   if((b.k!=='strength'&&b.k!=='accessory')||!b.mov||!Array.isArray(b.sets))return false;
-  if(b.mod!=='weightlifting'||!PR_PATTERNS.has(b.pat)||b.sub==='single_leg')return false;
-  return!PR_EXCLUDE_RAW.test(b.mov);
+  const movement=normMov(b.mov)||b.mov;
+  if(PR_EXCLUDE_NAME.test(movement))return false;
+  const c=clsAllCached(b.mov)[0];
+  return!!c&&c.mod==='weightlifting'&&PR_PATTERNS.has(c.pat)&&c.sub!=='single_leg';
 }
 // Heaviest set per movement+rep-scheme in one session, with no improvement filtering yet.
 function rawPrSets(session){
