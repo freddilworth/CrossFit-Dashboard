@@ -163,13 +163,15 @@ check('scanPrHistory collapses multiple improving sightings to a single candidat
   assert.strictEqual(found[0].weight, 425);
   assert.strictEqual(found[0].session_id, 's2');
 });
-check('scanPrHistory surfaces nothing for a rep-scheme with no seed PR at all, however heavy or well-progressed', () => {
+check('scanPrHistory with no seed PR at all still surfaces just the single all-time best (a first-time discovery)', () => {
   const sessions = [
     { ...strengthSession('Clean', [{ r: 1, w: 245 }]), id: 'earlier', date: '2026-01-01' },
     { ...strengthSession('Clean', [{ r: 1, w: 275 }]), id: 'later', date: '2026-05-01' },
   ];
   const found = scanPrHistory(sessions, []); // no seed PR at all for "Clean"
-  assert.strictEqual(found.length, 0);
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].session_id, 'later');
+  assert.strictEqual(found[0].weight, 275);
 });
 check('scanPrHistory does not surface anything when the all-time best does not beat the seed PR', () => {
   const sessions = [strengthSession('Clean', [{ r: 1, w: 245 }])];
