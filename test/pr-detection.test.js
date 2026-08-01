@@ -311,13 +311,21 @@ check('specific uncommon-to-PR gymnastics movements are excluded, singular and p
    'Banded Strict Pull-up', 'Banded Strict Pull-ups', 'Side Plank', 'Side Planks', 'Leg Raise', 'Leg Raises',
    'Hollow Body Rock', 'Hollow Body Rocks', 'Weighted Strict Pull-up', 'Weighted Strict Pull-ups',
    'Plank', 'Planks', 'Box Step Up', 'Box Step Ups', 'Alternating Pistol', 'Alternating Pistols',
-   'Banded Pull-up', 'Banded Pull-ups', 'Weighted Pull-up', 'Weighted Pull-ups']
+   'Banded Pull-up', 'Banded Pull-ups', 'Weighted Pull-up', 'Weighted Pull-ups',
+   'GHD Back Extension', 'GHD Back Extensions', 'Bar Dip', 'Bar Dips',
+   'Hand Release Push-Up', 'Hand Release Push-Ups', 'HRPU', 'Ring Row', 'Ring Rows',
+   'Weighted Dip', 'Weighted Dips']
     .forEach(mov => assert.strictEqual(rawGymnasticsReps(metconSession([[mov, 20]])).length, 0, mov));
 });
 check('excluding banded/weighted pull-up variants does not exclude a plain Pull-Up', () => {
   const raw = rawGymnasticsReps(metconSession([['Pull-ups', 20]]));
   assert.strictEqual(raw.length, 1);
   assert.strictEqual(raw[0].name, 'Pull-Up');
+});
+check('excluding Weighted Dip does not exclude a plain Dip', () => {
+  const raw = rawGymnasticsReps(metconSession([['Dip', 20]]));
+  assert.strictEqual(raw.length, 1);
+  assert.strictEqual(raw[0].name, 'Dip');
 });
 
 // ── Rope Climb / Rope Climbs must normalize to the same movement, not track separately ──

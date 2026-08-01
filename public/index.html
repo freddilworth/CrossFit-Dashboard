@@ -452,6 +452,11 @@ function normMov(nm){
   if(/wall\s*ball/.test(n))return'Wall Ball';
   if(/push.?up/.test(n)&&!/(ring|bar|hand\s*release|hrpu)/.test(n))return'Push-Up';
   if(/^hrpu$|hand\s*release\s*push/.test(n))return'Hand Release Push-Up';
+  // Dip variants — specific first so e.g. "Ring Dip" doesn't fall into the bare "Dip" rule
+  if(/ring\s*dips?/.test(n))return'Ring Dip';
+  if(/bar\s*dips?/.test(n))return'Bar Dip';
+  if(/weighted\s*dips?/.test(n))return'Weighted Dip';
+  if(/^dips?$/.test(n))return'Dip';
   // S2OH → Push Jerk
   if(/^s2oh$|shoulder\s*to\s*overhead/.test(n))return'Push Jerk';
   // Jerk variants
@@ -586,7 +591,7 @@ function scanPrHistory(sessions,currentPrs){
 // Regex, not an exact-name Set — an exact Set silently misses whatever singular/plural or exact
 // phrasing wasn't listed (e.g. "Banded Pull-ups" slipping past a Set entry for "Banded Pull-up"
 // only), the same class of bug that hit the weightlifting exclusion list's "Farmer's Carry" entry.
-const GYM_PR_EXCLUDE=/^air\s*squats?$|^v-?ups?$|^ring\s*dips?$|^sit-?ups?$|^side\s*planks?$|^leg\s*raises?$|^hollow\s*body\s*rocks?$|^planks?$|^box\s*step\s*ups?$|^alternating\s*pistols?$|banded.*pull.?up|weighted.*pull.?up/i;
+const GYM_PR_EXCLUDE=/^air\s*squats?$|^v-?ups?$|^ring\s*dips?$|^sit-?ups?$|^side\s*planks?$|^leg\s*raises?$|^hollow\s*body\s*rocks?$|^planks?$|^box\s*step\s*ups?$|^alternating\s*pistols?$|banded.*pull.?up|weighted.*pull.?up|^ghd\s*back\s*extensions?$|^bar\s*dips?$|^hand\s*release\s*push-?ups?$|^ring\s*rows?$|weighted.*dips?$/i;
 function rawGymnasticsReps(session){
   const totals={};
   function credit(rawName,reps){
