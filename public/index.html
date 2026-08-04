@@ -341,6 +341,13 @@ function clsAll(nm){
   // ── Clean & Jerk: hinge + vertical pull (active) + vertical push ──
   if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return[H,RVd,PVd];
 
+  // ── DB/KB Clean & Push Press: DB/KB racked at the sides during the clean (same rationale as
+  // Double KB C&J above) — hinge + horizontal pull (active) + vertical push ──
+  if(/(db|dumbbell|kb|kettlebell).*clean.*push\s*press/.test(n))return[H,RHd,PVd];
+
+  // ── Clean & Push Press (barbell): hinge + vertical pull (active) + vertical push ──
+  if(/clean.*push\s*press/.test(n))return[H,RVd,PVd];
+
   // ── Snatch DL / Snatch pull to hip: hinge only (no active overhead pull) ──
   if(/snatch\s*(dead\s*lift|dl\b|pull)|snatch\s*dl\s*to/.test(n))return[H,RH];
 
@@ -471,6 +478,13 @@ function normMov(nm){
   // Clean & Jerk variants
   if(/(double|dbl)\s*(kb|kettlebell)\s*(c&j|clean\s*(and|&)\s*jerk)/.test(n))return'Double KB C&J';
   if(/^c&j$|clean\s*(and|&)\s*jerk/.test(n))return'Clean & Jerk';
+  // Clean & Push Press variants — double-implement kept distinct from single DB/KB (2x the load)
+  // and from the plain barbell version, same rationale as Double DB Reverse Lunge above.
+  if(/(double|dbl|two)\s*(db|dumbbell)s?\s*clean.*push\s*press/.test(n))return'Double DB Clean & Push Press';
+  if(/(double|dbl|two)\s*(kb|kettlebell)s?\s*clean.*push\s*press/.test(n))return'Double KB Clean & Push Press';
+  if(/(db|dumbbell)\s*clean.*push\s*press/.test(n))return'DB Clean & Push Press';
+  if(/(kb|kettlebell)\s*clean.*push\s*press/.test(n))return'KB Clean & Push Press';
+  if(/clean.*push\s*press/.test(n))return'Clean & Push Press';
   // Thruster
   if(/thrusters?/.test(n))return'Thruster';
   // Lunge variants

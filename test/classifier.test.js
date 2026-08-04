@@ -132,6 +132,23 @@ const COMPOUND = [
     { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
     { pat: 'push', sub: 'horizontal', mod: 'gymnastics' },
   ]],
+  // DB/KB racked at the sides during the clean, so pull path is horizontal (same rationale as
+  // Double KB C&J) — unlike the barbell version below, which pulls vertically close to the body.
+  ['Double DB Clean & Push Press', [
+    { pat: 'hinge', sub: null, mod: 'weightlifting' },
+    { pat: 'pull', sub: 'horizontal', mod: 'weightlifting', dualTon: true },
+    { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+  ]],
+  ['DB Clean & Push Press', [
+    { pat: 'hinge', sub: null, mod: 'weightlifting' },
+    { pat: 'pull', sub: 'horizontal', mod: 'weightlifting', dualTon: true },
+    { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+  ]],
+  ['Clean & Push Press', [
+    { pat: 'hinge', sub: null, mod: 'weightlifting' },
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+    { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+  ]],
   // "+"-joined complexes: each named lift classified separately and combined, so a complex neither
   // over-credits (whichever lift matches first stealing the whole thing) nor under-credits (a lift
   // later in the string never getting checked at all) its component patterns.
@@ -210,6 +227,10 @@ const NORM = [
   ['Bicep Curl', 'Bicep Curl'],
   ['Double KB C&J', 'Double KB C&J'], // must NOT merge into generic Clean & Jerk
   ['Clean & Jerk', 'Clean & Jerk'],
+  ['Double DB Clean & Push Press', 'Double DB Clean & Push Press'],
+  ['Dbl DB Clean and Push Press', 'Double DB Clean & Push Press'],
+  ['DB Clean & Push Press', 'DB Clean & Push Press'], // must NOT merge into Double DB version
+  ['Clean & Push Press', 'Clean & Push Press'], // barbell — must NOT merge into DB version
   ['DB Bent Over Row', 'DB Bent Over Row'],
   ['DB Bent Over Rows', 'DB Bent Over Row'],
   ['Rope Climb', 'Rope Climb'],

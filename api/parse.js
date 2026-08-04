@@ -54,6 +54,19 @@ Burpee, Burpee over Bar = pat:mono, sub:null, mod:monostructural
 SA DB (single-arm dumbbell) movements: treat same as their barbell equivalents for pat/mod
 DB Hang Snatch = pat:hinge, mod:weightlifting
 SA DB Thruster = pat:squat, sub:traditional, mod:weightlifting
+DB Clean & Push Press, Double DB Clean & Push Press, KB Clean & Push Press = pat:hinge, mod:weightlifting (clean + push press combo, one rep of each)
+
+DUMBBELL/KETTLEBELL WEIGHT RULE (critical — never store the per-implement weight when two are used):
+CrossFit convention writes only ONE weight in parentheses after a DB/KB movement, and that number is
+always the load of a SINGLE implement — regardless of how many are actually held:
+- No "Double"/"Dbl"/"Two" (or similar) before the movement name: one DB/KB is used. Store "w" as
+  the number shown, unchanged.
+- "Double"/"Dbl"/"Two" (or similar) before the movement name: one DB/KB is held in EACH hand, so the
+  total load moved per rep is 2x the number shown. Store "w" as 2x that number (the total, not the
+  per-implement figure) — this is what tonnage math uses, so storing the unhalved number silently
+  undercounts every set/rep of that movement by half.
+- Examples: "DB Snatch (50)" -> w:50. "Double DB Front Squat (50)" -> w:100 (2 x 50, one 50lb DB per
+  hand). "Dbl KB Swing (35)" -> w:70. "Double DB Clean & Push Press (50)" -> w:100.
 
 QUANTITY RULES:
 - "td" for metcon time domain: short (<10min), med (10-20min), long (>20min)
