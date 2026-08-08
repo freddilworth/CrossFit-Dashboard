@@ -68,6 +68,24 @@ always the load of a SINGLE implement — regardless of how many are actually he
 - Examples: "DB Snatch (50)" -> w:50. "Double DB Front Squat (50)" -> w:100 (2 x 50, one 50lb DB per
   hand). "Dbl KB Swing (35)" -> w:70. "Double DB Clean & Push Press (50)" -> w:100.
 
+CIRCUIT/SUPERSET STRENGTH & ACCESSORY RULE (critical — never mash multiple movements into one block):
+A strength/accessory section sometimes lists a round count (e.g. "3 Sets", "4 Rounds") followed by
+SEVERAL DIFFERENT movements, each with its own rep count — a superset/circuit, not a single lift
+with a rep scheme. Each strength/accessory block's "mov" field holds exactly ONE movement name
+(see schema above) — never join multiple movement names with "/" or "+" into a single "mov" string,
+and never collapse their reps into a single placeholder set.
+- Emit ONE SEPARATE block per movement in the circuit, each with k:"strength" or k:"accessory"
+  (matching the section header, same as normal), its own mov/pat/sub/mod, and its own "sets" array
+  repeated once per round, using THAT movement's own rep count and weight each time.
+- Example: "Accessory: 3 Sets / 15 Double KB Squats (53) / 20 Reverse Lunges / 10 Strict Pull-ups /
+  20 KB Bent Over Rows (53)" -> FOUR blocks:
+  {"k":"accessory","mov":"Double KB Squat","pat":"squat","sub":"traditional","mod":"weightlifting","sets":[{"r":15,"w":106},{"r":15,"w":106},{"r":15,"w":106}]}
+  {"k":"accessory","mov":"Reverse Lunge","pat":"squat","sub":"single-leg","mod":"gymnastics","sets":[{"r":20,"w":0},{"r":20,"w":0},{"r":20,"w":0}]}
+  {"k":"accessory","mov":"Strict Pull-up","pat":"pull","sub":"vertical","mod":"gymnastics","sets":[{"r":10,"w":0},{"r":10,"w":0},{"r":10,"w":0}]}
+  {"k":"accessory","mov":"KB Bent Over Row","pat":"pull","sub":"horizontal","mod":"weightlifting","sets":[{"r":20,"w":53},{"r":20,"w":53},{"r":20,"w":53}]}
+  (note: "Double" only precedes "KB Squats" so only that movement's weight doubles per the
+  DUMBBELL/KETTLEBELL WEIGHT RULE below — Reverse Lunges and the Row are unaffected)
+
 QUANTITY RULES:
 - "td" for metcon time domain: short (<10min), med (10-20min), long (>20min)
 - "pm" = parsed movements with TOTAL reps estimated from score
