@@ -31,12 +31,18 @@ Vercel. Push to `main` auto-deploys. GitHub PAT is embedded in the git remote UR
 - Production URL: **https://crossfit-dashboard-eight.vercel.app**
 - Supabase URL: `https://bpxajptyviarsgxbzpqr.supabase.co`
 - Credentials for local data queries: read from `.env.local` (gitignored — never commit)
-- To answer any question about live workout data, query Supabase directly rather than asking the user to look it up. Example:
+- STALE as of the `002_multi_tenant.sql` migration (confirmed applied to production 2026-08-25):
+  querying `sessions`/`prs`/etc. with just `SUPABASE_ANON_KEY` now returns `[]` (200 OK, zero rows)
+  because RLS restricts reads to an authenticated user's own rows — the anon key alone no longer
+  carries a user identity. The old example below no longer works as written:
   ```bash
   ANON_KEY=$(grep SUPABASE_ANON_KEY .env.local | cut -d= -f2)
   curl -s "https://bpxajptyviarsgxbzpqr.supabase.co/rest/v1/sessions?date=gte.2026-07-06&date=lte.2026-07-12" \
     -H "apikey: $ANON_KEY" -H "Authorization: Bearer $ANON_KEY"
   ```
+  `.env.local` has a `SUPABASE_SERVICE_ROLE_KEY` slot reserved for this (bypasses RLS) but it's
+  currently empty — until it's filled in, direct live-data queries aren't possible; fall back to
+  asking the user to check the app, or ask them to add the service role key to `.env.local` first.
 
 ## Database schema (Supabase PostgreSQL)
 
@@ -64,4 +70,4 @@ Vercel. Push to `main` auto-deploys. GitHub PAT is embedded in the git remote UR
 - Both categories require an existing confirmed PR to beat for day-to-day (post-submit) detection; the historical backfill scan surfaces a movement's single all-time-best value even with no prior baseline (relying on Dismiss, not stricter detection, to handle the occasional false positive — e.g. a one-off light/easy session).
 
 ## SaaS plans (in progress)
-Owner is exploring turning this into a paid multi-user product. Key architecture needs: Supabase Auth (row-level security per user), Stripe subscriptions, per-user data isolation. Anthropic API billing is separate from Claude.ai — pay-as-you-go at console.anthropic.com, ~$0.12/user/month at current usage.
+Owner is exploring turning this into a paid multi-user product. Row-level security / per-user data isolation is already live in production (`002_multi_tenant.sql` — see the stale-query note under Live Deployment above). Still outstanding: Stripe subscriptions. Anthropic API billing is separate from Claude.ai — pay-as-you-go at console.anthropic.com, ~$0.12/user/month at current usage.

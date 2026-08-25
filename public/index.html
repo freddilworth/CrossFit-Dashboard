@@ -324,6 +324,12 @@ function clsAll(nm){
     }
   }
 
+  // ── Double DB Burpee Box Step Over: burpee (bodyweight, no tonnage) + DB deadlift pickup (hinge,
+  // tonnage-credited) + step-over carrying the DBs (bounding) — must precede the generic BBSO rule
+  // below, which has no hinge component and would otherwise credit the DB load's tonnage to the
+  // bodyweight push instead of the load-bearing hinge pickup.
+  if(/(double|dbl|two)\s*db\s*burpee\s*(box\s*step.?overs?|bso)\b/.test(n))return[{...PH,zeroTon:true},{...H,dualTon:true},BD];
+
   // ── Compound gymnastics / odd-object ──
   if(/thrusters?/.test(n))return[SQ,PVd];
   if(/\bbbjo\b|burpee\s*box\s*jump\s*over/.test(n))return[PH,BD];
@@ -436,6 +442,10 @@ function normMov(nm){
   if(/^sb\s*hold$|sandbag\s*hold/.test(n))return'Sandbag Hold';
   if(/sandbag\s*cleans?|\bsb\s*cleans?\b/.test(n))return'Sandbag Clean';
   if(/(db\s*)?bicep\s*curls?/.test(n))return'Bicep Curl';
+  // Double DB Burpee Box Step Over — must precede the generic Box Step Over/BBSO rules below, whose
+  // regexes don't require "db" and would otherwise collapse this movement's name (dropping "Double
+  // DB", and for the fully spelled-out form, "Burpee" too) before this rule gets a chance.
+  if(/(double|dbl|two)\s*db\s*burpee\s*(box\s*step.?overs?|bso)\b/.test(n))return'Double DB Burpee Box Step Over';
   // Box variants
   if(/^bso$|box\s*step\s*over/.test(n))return'Box Step Over';
   if(/^bsu$|box\s*step.?up/.test(n))return'Box Step Up';

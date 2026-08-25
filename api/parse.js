@@ -118,6 +118,27 @@ X full rounds, movement by movement, until Y is used up:
   undercounts every AMRAP that doesn't finish on an exact round boundary, which is most
   of them.
 
+LADDER / ASCENDING-REP AMRAP RULE (critical — per-round reps are NOT constant here, so the
+fixed reps_per_round math above does not apply as-is):
+Some AMRAPs increase (or decrease) one movement's rep count by a fixed amount every round
+instead of repeating the same count each round — e.g. "1 C&J, add 1 every round" (round 1 = 1
+rep, round 2 = 2 reps, round 3 = 3 reps...) — while other movements in the same cycle stay
+constant.
+- Full rounds: total reps for the laddering movement across X completed rounds is the sum of
+  that arithmetic sequence, NOT starting_reps × X. For a movement starting at S and increasing
+  by D each round, X full rounds = S + (S+D) + (S+2D) + ... for X terms.
+- Partial round (the "+Y" reps): when walking the cycle for the partial round (per the AMRAP
+  PARTIAL ROUND RULE above), the laddering movement's "per-round reps" for that comparison is
+  its round-(X+1) count (starting_reps + D×X) — the count it would have on the round that was
+  in progress when time expired — never its round-1 (starting) count.
+- Worked example: "10 min AMRAP: 1 C&J (185), 150m Run, add 1 C&J every round (run stays the
+  same)", score "6+4" -> 6 full rounds of C&J = 1+2+3+4+5+6 = 21. Round 7 (in progress when time
+  expired) would call for 7 C&J; remaining Y=4 < 7, so C&J is the first movement in the cycle
+  and gets exactly that partial amount: +4. Total C&J = 21 + 4 = 25. Run gets no partial credit
+  since remaining Y was exhausted by C&J first. Never treat the partial round's quota as round
+  1's starting count (that gives 21 + 1 = 22, silently undercounting every ladder AMRAP that
+  ends mid-ladder).
+
 REPEATED MOVEMENT WITHIN ONE ROUND RULE (critical — each occurrence gets only its OWN
 share, never the combined total of all occurrences):
 Sometimes the same movement name appears more than once inside a SINGLE round/cycle of

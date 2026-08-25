@@ -167,6 +167,19 @@ const COMPOUND = [
     { pat: 'pull', sub: 'vertical', mod: 'weightlifting', dualTon: true },
     { pat: 'squat', sub: 'traditional', mod: 'weightlifting', dualTon: true },
   ]],
+  // Burpee (bodyweight push, no tonnage) + DB deadlift pickup (hinge, tonnage-credited) + step-over
+  // carrying the DBs (bounding) — must classify the same regardless of "Box Step Over" vs "BSO"
+  // wording, and must NOT collapse to the generic BBSO rule (which has no hinge component).
+  ['Double DB Burpee Box Step Over', [
+    { pat: 'push', sub: 'horizontal', mod: 'gymnastics', zeroTon: true },
+    { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
+    { pat: null, sub: 'bounding', mod: 'monostructural' },
+  ]],
+  ['Double DB Burpee BSO', [
+    { pat: 'push', sub: 'horizontal', mod: 'gymnastics', zeroTon: true },
+    { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
+    { pat: null, sub: 'bounding', mod: 'monostructural' },
+  ]],
 ];
 
 for (const [name, expected] of COMPOUND) {
@@ -243,6 +256,10 @@ const NORM = [
   ['Bar Dips', 'Bar Dip'],
   ['Weighted Dip', 'Weighted Dip'],
   ['Weighted Dips', 'Weighted Dip'],
+  ['Double DB Burpee Box Step Over', 'Double DB Burpee Box Step Over'],
+  ['Double DB Burpee Box Step Overs', 'Double DB Burpee Box Step Over'],
+  ['Double DB Burpee BSO', 'Double DB Burpee Box Step Over'],
+  ['Dbl DB Burpee BSO', 'Double DB Burpee Box Step Over'],
 ];
 
 for (const [name, expected] of NORM) {
