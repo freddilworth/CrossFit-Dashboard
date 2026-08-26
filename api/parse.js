@@ -145,6 +145,25 @@ constant.
   1's starting count (that gives 21 + 1 = 22, silently undercounting every ladder AMRAP that
   ends mid-ladder).
 
+CHAINED / MULTI-PART INTERVAL RULE (critical — each stacked block keeps its OWN round count,
+never one borrowed from a different block):
+Workouts are sometimes written as two or more separate "Every X minutes for Y Rounds" (or EMOM,
+AMRAP, For Time) structures stacked back-to-back — signaled by phrasing like "immediately into",
+"then", or a blank line/heading break between them. Each such block is self-contained: its own
+time interval, its own explicitly stated round count, and often its own (different) rep scheme
+for the same movements.
+- Compute each block independently: reps_per_round × THAT block's own stated round count. Never
+  reuse a round count, interval length, or rep scheme from a preceding or following block just
+  because the two blocks share the same movement list or structure — read every number from its
+  own block's text only, even when an adjacent block's numbers would seem like a natural continuation.
+- After computing each block independently, SUM any movement that recurs across blocks into one
+  total (same rationale as the REPEATED MOVEMENT WITHIN ONE ROUND RULE below) rather than
+  crediting it from only one block.
+- Example: "Every 8:00 for 3 Rounds: 20 Back Squat (115) ... / immediately into / Every 4:00 for
+  2 Rounds: 10 Back Squat (115) ..." -> Back Squat = (3 × 20) + (2 × 10) = 60 + 20 = 80. Do NOT
+  carry the first block's round count (3) into the second block (giving 3×10=30 instead of
+  2×10=20, and a wrong total of 90) — the second block says 2 Rounds, not 3.
+
 REPEATED MOVEMENT WITHIN ONE ROUND RULE (critical — each occurrence gets only its OWN
 share, never the combined total of all occurrences):
 Sometimes the same movement name appears more than once inside a SINGLE round/cycle of
