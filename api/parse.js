@@ -65,8 +65,14 @@ always the load of a SINGLE implement — regardless of how many are actually he
   total load moved per rep is 2x the number shown. Store "w" as 2x that number (the total, not the
   per-implement figure) — this is what tonnage math uses, so storing the unhalved number silently
   undercounts every set/rep of that movement by half.
+- Exception — DB Bench Press (and DB Bench / DB Floor Press, same lift): unlike other DB/KB
+  movements, this ALWAYS uses two dumbbells, one in each hand, even with no "Double"/"Dbl"/"Two"
+  prefix — a one-DB bench press isn't how this lift is done. Store "w" as 2x the number shown by
+  default. This does NOT apply if the text explicitly marks it single-arm ("SA DB Bench Press (70)"
+  -> w:70, unchanged, per the SA rule above) — SA is the only thing that overrides this exception.
 - Examples: "DB Snatch (50)" -> w:50. "Double DB Front Squat (50)" -> w:100 (2 x 50, one 50lb DB per
-  hand). "Dbl KB Swing (35)" -> w:70. "Double DB Clean & Push Press (50)" -> w:100.
+  hand). "Dbl KB Swing (35)" -> w:70. "Double DB Clean & Push Press (50)" -> w:100. "DB Bench Press
+  (70)" -> w:140 (two 70lb DBs, no "Double" needed). "SA DB Bench Press (70)" -> w:70 (single-arm).
 
 CIRCUIT/SUPERSET STRENGTH & ACCESSORY RULE (critical — never mash multiple movements into one block):
 A strength/accessory section sometimes lists a round count (e.g. "3 Sets", "4 Rounds") followed by
