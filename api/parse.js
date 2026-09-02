@@ -183,6 +183,15 @@ of that movement in the round.
   movement name. That sum must equal reps_per_occurrence × occurrences_per_round ×
   total_rounds — no more. If the sum is a multiple of that (2x, 3x, ...), each entry was
   given the full combined total instead of its own share; divide back down.
+- This applies identically when the repeating cycle is written as ordinal minute labels
+  instead of a flat inline list — "1st min: ... / 2nd min: ... / 3rd min: ... / 4th min:
+  ... / 5th min: Rest" is still one repeating cycle, and two different minute-labels
+  carrying the same movement are still two separate occurrences to sum, not one.
+- Example: "20 min EMOM, 1st min: 200m Run, 2nd min: 6 Burpees to target + 12 T2B, 3rd
+  min: 200m Run, 4th min: Max Burpee Pull-ups, 5th min: Rest" -> the cycle is 5 minutes
+  long, so 20 min = 4 completed cycles, and Run occurs at BOTH the 1st min and the 3rd
+  min of every cycle. Total Run = (200 × 4) + (200 × 4) = 800 + 800 = 1600m — never just
+  800m from crediting only one of the two minute-slots.
 
 DISTANCE RULE (critical — never store round count for distance movements):
 For Run, Row, Ski, Bike, Sled Push, Farmer Carry, and ANY movement stated in meters/yards/
