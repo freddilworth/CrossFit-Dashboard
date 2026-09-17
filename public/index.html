@@ -221,7 +221,7 @@ function cls(nm){
   if(/\bhkr\b|hanging\s*knee\s*raise/.test(n))return{pat:'core',sub:null,mod:'gymnastics'};
   // Pull — vertical (BMU/RMU abbreviations before generic muscle-up)
   if(/\bbmu\b|\brmu\b|bar\s*muscle.?up|ring\s*muscle.?up/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
-  if(/pull.?up|muscle.?up|c2b|chest.?to|rope\s*climb|butterfly|kipping/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
+  if(/pull.?up|chin.?up|muscle.?up|c2b|chest.?to|rope\s*climb|butterfly|kipping/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
   if(/strict\s*pull/.test(n))return{pat:'pull',sub:'vertical',mod:'gymnastics'};
   // Pull — horizontal
   if(/ring\s*row|\brr\b/.test(n))return{pat:'pull',sub:'horizontal',mod:'gymnastics'};
@@ -339,6 +339,11 @@ function clsAll(nm){
   if(/man\s*maker/.test(n))return[PH,{pat:'pull',sub:'horizontal',mod:'gymnastics',dualTon:true},SQd,PVd];
   if(/curtis\s*p/.test(n))return[H,RVd,SLd,PVd];
   if(/\bcluster\b/.test(n))return[H,RVd,SQd,PVd];
+  // Cuban Press: upright row to shoulder height + external rotation + strict press overhead — the
+  // same (usually light) weight moves through both the pull and push phases, so both get full
+  // tonnage credit. Not the same movement as Landmine Press (that's a press only, no row phase)
+  // despite both names containing "press".
+  if(/cuban\s*press/.test(n))return[RV,PVd];
 
   // ── Double KB Clean & Jerk: racked at the sides, so the pull path is horizontal (hip to rack)
   // rather than the barbell's vertical path — hinge + horizontal pull (active) + vertical push ──
@@ -425,6 +430,10 @@ function normMov(nm){
   if(/^bmu$|bar\s*muscle.?up/.test(n))return'Bar Muscle-Up';
   if(/^rmu$|ring\s*muscle.?up/.test(n))return'Ring Muscle-Up';
   if(/burpee\s*pull.?up/.test(n))return'Burpee Pull-Up';
+  // Kept distinct from Pull-Up (unlike Strict Pull-up below, which pools in) — a chin-up's
+  // supinated grip is a different-enough movement that pooling its reps/PR with pronated
+  // pull-ups would misrepresent both, same rationale as keeping Ring Dip/Bar Dip separate below.
+  if(/^chin.?ups?$/.test(n))return'Chin-Up';
   if(/^pull.?ups?$|^strict\s*pull.?ups?$/.test(n))return'Pull-Up';
   if(/rope\s*climbs?/.test(n))return'Rope Climb';
   // Core
@@ -442,6 +451,7 @@ function normMov(nm){
   if(/^sb\s*hold$|sandbag\s*hold/.test(n))return'Sandbag Hold';
   if(/sandbag\s*cleans?|\bsb\s*cleans?\b/.test(n))return'Sandbag Clean';
   if(/(db\s*)?bicep\s*curls?/.test(n))return'Bicep Curl';
+  if(/cuban\s*press(es)?/.test(n))return'Cuban Press';
   // Double DB Burpee Box Step Over — must precede the generic Box Step Over/BBSO rules below, whose
   // regexes don't require "db" and would otherwise collapse this movement's name (dropping "Double
   // DB", and for the fully spelled-out form, "Burpee" too) before this rule gets a chance.

@@ -37,6 +37,10 @@ function check(label, fn) {
 // ── Single-pattern movements: name -> expected primary {pat, sub, mod} ──
 const SINGLE = [
   // Bugs fixed this session
+  ['Landmine Press', { pat: 'push', sub: 'vertical', mod: 'weightlifting' }],
+  ['Chin Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
+  ['Chin-Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
+  ['Chin Ups', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
   ['Ring Dip', { pat: 'push', sub: 'horizontal', mod: 'gymnastics' }],
   ['Ring Dips', { pat: 'push', sub: 'horizontal', mod: 'gymnastics' }],
   ['Dip', { pat: 'push', sub: 'vertical', mod: 'gymnastics' }], // plain dip unchanged
@@ -180,6 +184,16 @@ const COMPOUND = [
     { pat: 'hinge', sub: null, mod: 'weightlifting', dualTon: true },
     { pat: null, sub: 'bounding', mod: 'monostructural' },
   ]],
+  // Upright row + external rotation + strict press overhead — same light weight moves through
+  // both the pull and push phases. Must NOT collide with the unrelated Landmine Press (press only).
+  ['Cuban Press', [
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting' },
+    { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+  ]],
+  ['DB Cuban Press', [
+    { pat: 'pull', sub: 'vertical', mod: 'weightlifting' },
+    { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },
+  ]],
 ];
 
 for (const [name, expected] of COMPOUND) {
@@ -260,6 +274,15 @@ const NORM = [
   ['Double DB Burpee Box Step Overs', 'Double DB Burpee Box Step Over'],
   ['Double DB Burpee BSO', 'Double DB Burpee Box Step Over'],
   ['Dbl DB Burpee BSO', 'Double DB Burpee Box Step Over'],
+  ['Cuban Press', 'Cuban Press'],
+  ['DB Cuban Press', 'Cuban Press'],
+  ['Cuban Presses', 'Cuban Press'],
+  ['Chin Up', 'Chin-Up'],
+  ['Chin-Up', 'Chin-Up'],
+  ['Chin Ups', 'Chin-Up'],
+  ['Chin-ups', 'Chin-Up'],
+  ['Pull-Up', 'Pull-Up'],           // must NOT merge into/from Chin-Up
+  ['Strict Pull-up', 'Pull-Up'],    // must NOT merge into Chin-Up
 ];
 
 for (const [name, expected] of NORM) {
