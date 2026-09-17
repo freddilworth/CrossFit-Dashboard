@@ -120,9 +120,22 @@ X full rounds, movement by movement, until Y is used up:
   score "2+14" → Box Step Ups = 2×10 + 10 = 30 (14 covers all 10, 4 remain), Snatches =
   2×10 + 4 = 24 (partial, remaining Y exhausted here), Lunges = 2×10 + 0 = 20 (no partial
   reached).
+- Small-Y example (Y doesn't even cover the FIRST movement — do not treat this as "no
+  partial credit" or round Y down to 0): cycle is 10 HSPU / 8 Pistols / 6 DB Push Press
+  each arm (50) / 4 Dbl DB Box Step Overs (50), score "8+5" → HSPU is first in the cycle
+  and remaining Y=5 is already less than its per-round reps (10), so HSPU gets the entire
+  partial amount: 8×10 + 5 = 85 (never 8×10 + 0 = 80 — a partial smaller than the first
+  movement's own rep count is still a real partial, not a rounding error to discard).
+  Pistols/Push Press/Box Step Overs get no partial credit here since Y was fully spent on
+  HSPU.
 - Never simply multiply reps_per_round × full_rounds and ignore the "+Y" — that silently
   undercounts every AMRAP that doesn't finish on an exact round boundary, which is most
   of them.
+- Verification before finalizing: the first movement's stored total must equal
+  (reps_per_round × full_rounds) + partial_credit, where partial_credit is 0 only if the
+  score's "+Y" portion is itself 0. If "+Y" is nonzero and the first movement's total is
+  exactly reps_per_round × full_rounds with no addition, the partial round was dropped —
+  go back and add it.
 
 LADDER / ASCENDING-REP AMRAP RULE (critical — per-round reps are NOT constant here, so the
 fixed reps_per_round math above does not apply as-is):
