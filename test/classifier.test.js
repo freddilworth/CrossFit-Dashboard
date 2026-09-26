@@ -38,6 +38,8 @@ function check(label, fn) {
 const SINGLE = [
   // Bugs fixed this session
   ['Landmine Press', { pat: 'push', sub: 'vertical', mod: 'weightlifting' }],
+  ['RFESS', { pat: 'squat', sub: 'single_leg', mod: 'weightlifting' }],
+  ['Double DB RFESS', { pat: 'squat', sub: 'single_leg', mod: 'weightlifting' }],
   ['Chin Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
   ['Chin-Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
   ['Chin Ups', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
@@ -283,6 +285,12 @@ const NORM = [
   ['Chin-ups', 'Chin-Up'],
   ['Pull-Up', 'Pull-Up'],           // must NOT merge into/from Chin-Up
   ['Strict Pull-up', 'Pull-Up'],    // must NOT merge into Chin-Up
+  ['RFESS', 'Bulgarian Split Squat'],
+  ['Double DB RFESS', 'Bulgarian Split Squat'],
+  ['Dbl DB RFESS', 'Bulgarian Split Squat'],
+  ['Rear Foot Elevated Split Squat', 'Bulgarian Split Squat'],
+  ['Bulgarian Split Squat', 'Bulgarian Split Squat'],
+  ['Split Squat', 'Split Squat'],   // must NOT merge into Bulgarian Split Squat / RFESS
 ];
 
 for (const [name, expected] of NORM) {

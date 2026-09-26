@@ -250,7 +250,7 @@ function cls(nm){
   if(/\bbsu\b|box\s*step.?up/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
   // Pistol is bodyweight, unlike the loaded single-leg variants below
   if(/pistol/.test(n))return{pat:'squat',sub:'single_leg',mod:'gymnastics'};
-  if(/lunge|step.?up|split\s*sq|bulgarian/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
+  if(/lunge|step.?up|split\s*sq|bulgarian|\brfess\b/.test(n))return{pat:'squat',sub:'single_leg',mod:'weightlifting'};
   // Air squat checked before the generic squat catch-all, since "air squat" also contains "squat"
   if(/air\s*squat/.test(n))return{pat:'squat',sub:'traditional',mod:'gymnastics'};
   if(/squat|ohs\b|overhead\s*sq|goblet/.test(n))return{pat:'squat',sub:'traditional',mod:'weightlifting'};
@@ -447,6 +447,10 @@ function normMov(nm){
   if(/^kbs$|kb\s*swing|kettlebell\s*swing/.test(n))return'KB Swing';
   if(/dbl\s*kb\s*farmer|double\s*kb\s*farmer/.test(n))return"Farmer's Carry";
   if(/dbl\s*db\s*farmers?\s*reverse\s*lunge|double\s*db\s*farmers?\s*reverse\s*lunge/.test(n))return'Double DB Reverse Lunge';
+  // RFESS (Rear Foot Elevated Split Squat) is the same movement as a Bulgarian Split Squat, just a
+  // different name for it — pool both spellings into the one canonical name already used elsewhere
+  // in the app, so reps/PRs aren't split across two names for one movement.
+  if(/\brfess\b|rear\s*foot\s*elevated\s*split\s*sq/.test(n))return'Bulgarian Split Squat';
   if(/^sb\s*carry$|sandbag\s*carry/.test(n))return'Sandbag Carry';
   if(/^sb\s*hold$|sandbag\s*hold/.test(n))return'Sandbag Hold';
   if(/sandbag\s*cleans?|\bsb\s*cleans?\b/.test(n))return'Sandbag Clean';
