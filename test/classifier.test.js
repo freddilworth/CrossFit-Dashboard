@@ -40,6 +40,7 @@ const SINGLE = [
   ['Landmine Press', { pat: 'push', sub: 'vertical', mod: 'weightlifting' }],
   ['RFESS', { pat: 'squat', sub: 'single_leg', mod: 'weightlifting' }],
   ['Double DB RFESS', { pat: 'squat', sub: 'single_leg', mod: 'weightlifting' }],
+  ['Bar Muscle-Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }], // single-pattern, unlike ring
   ['Chin Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
   ['Chin-Up', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
   ['Chin Ups', { pat: 'pull', sub: 'vertical', mod: 'gymnastics' }],
@@ -188,6 +189,19 @@ const COMPOUND = [
   ]],
   // Upright row + external rotation + strict press overhead — same light weight moves through
   // both the pull and push phases. Must NOT collide with the unrelated Landmine Press (press only).
+  // Vertical pull to get above the rings + horizontal press-out to lockout — two patterns per rep.
+  ['Ring Muscle-Up', [
+    { pat: 'pull', sub: 'vertical', mod: 'gymnastics' },
+    { pat: 'push', sub: 'horizontal', mod: 'gymnastics', dualTon: true },
+  ]],
+  ['RMU', [
+    { pat: 'pull', sub: 'vertical', mod: 'gymnastics' },
+    { pat: 'push', sub: 'horizontal', mod: 'gymnastics', dualTon: true },
+  ]],
+  ['Ring Muscle-Ups', [
+    { pat: 'pull', sub: 'vertical', mod: 'gymnastics' },
+    { pat: 'push', sub: 'horizontal', mod: 'gymnastics', dualTon: true },
+  ]],
   ['Cuban Press', [
     { pat: 'pull', sub: 'vertical', mod: 'weightlifting' },
     { pat: 'push', sub: 'vertical', mod: 'weightlifting', dualTon: true },

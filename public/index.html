@@ -344,6 +344,9 @@ function clsAll(nm){
   // tonnage credit. Not the same movement as Landmine Press (that's a press only, no row phase)
   // despite both names containing "press".
   if(/cuban\s*press/.test(n))return[RV,PVd];
+  // Ring Muscle-Up: vertical pull to get above the rings, then a horizontal press-out (the ring
+  // dip) to lockout — two distinct patterns in one rep. Bar muscle-ups stay single-pattern.
+  if(/\brmu\b|ring\s*muscle.?ups?/.test(n))return[{pat:'pull',sub:'vertical',mod:'gymnastics'},{...PH,dualTon:true}];
 
   // ── Double KB Clean & Jerk: racked at the sides, so the pull path is horizontal (hip to rack)
   // rather than the barbell's vertical path — hinge + horizontal pull (active) + vertical push ──
